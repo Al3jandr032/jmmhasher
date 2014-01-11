@@ -141,7 +141,7 @@ void MD5_init(MD5_Context* md5) {
     md5->state[3] = 0x10325476;
 }
 
-void MD5_Final(MD5_Context* md5) {
+void MD5_final(MD5_Context* md5) {
     unsigned int i;
 
     i = md5->datalen;
@@ -193,7 +193,7 @@ void MD5_Final(MD5_Context* md5) {
     }
 }
 
-void MD5_Update(MD5_Context* md5, unsigned char* data, unsigned int length) {
+void MD5_update(MD5_Context* md5, unsigned char* data, unsigned int length) {
     unsigned int i;
 
     for (i = 0; i < length; ++i) {
