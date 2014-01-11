@@ -16,5 +16,5 @@ In spirit of the original program and in spirit of open source, this library
 will be licensed under the Lesser GNU Public License v3 included in the sister
 file [LICENSE.txt][2].
 
-    [1]: http://code.google.com/p/jmm "Japanese Media Manager"
-    [2]: LICENSE.txt "LGPLv3 license"
+  [1]: http://code.google.com/p/jmm "Japanese Media Manager"
+  [2]: LICENSE.txt "GPLv3 and LGPLv3 license"
