@@ -1,4 +1,5 @@
 #include "core/crc32.h"
+#include "core/md5.h"
 #include <stdio.h>
 
 /**
@@ -31,6 +32,32 @@ void hash_file_crc32(char* filename) {
     printf(" %s\n", filename);
 }
 
+void hash_file_md5(char* filename) {
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "%s cannot be opened.\n", filename);
+        return;
+    }
+
+    MD5_Context md5;
+    MD5_init(&md5);
+
+    int bytes;
+    unsigned char data[1024];
+    while ((bytes = fread(data, 1, 1024, file)) != 0) {
+        MD5_update(&md5, data, bytes);
+    }
+    MD5_final(&md5);
+
+    fclose(file);
+
+    printf("  ");
+    for (int i = 0; i < 16; ++i) {
+        printf("%02x", md5.hash[i]);
+    }
+    printf(" %s\n", filename);
+}
+
 /**
  * Main entry point for the mac test program.
  * @param  argc The number of arguments the program was called with.
@@ -45,7 +72,8 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 1; i < argc; ++i) {
-        hash_file_crc32(argv[i]);
+        //hash_file_crc32(argv[i]);
+        hash_file_md5(argv[i]);
     }
 
     return 0;
