@@ -141,22 +141,23 @@ void MD5_init(MD5_Context* md5) {
 }
 
 void MD5_final(MD5_Context* md5) {
-    uint32_t i;
-
-    i = md5->datalen;
+    uint16_t remain;
 
     // Pad whatever data is left in the buffer.
     if (md5->datalen < 56) {
-        md5->data[i++] = 0x80;
-        while (i < 56) {
-            md5->data[i++] = 0x00;
-        }
-    } else if (md5->datalen >= 56) {
-        md5->data[i++] = 0x80;
-        while (i < 64) {
-            md5->data[i++] = 0x00;
+        remain = 56 - md5->datalen;
+        if (remain > 0) {
+            memset(md5->data + md5->datalen, 0, remain);
         }
 
+        md5->data[md5->datalen] = 0x80;
+    } else if (md5->datalen >= 56) {
+        remain = 64 - md5->datalen;
+        if (remain > 0) {
+            memset(md5->data + md5->datalen, 0, remain);
+        }
+
+        md5->data[md5->datalen] = 0x80;
         transform(md5, md5->data);
         memset(md5->data, 0, 56);
     }
