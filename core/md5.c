@@ -31,6 +31,11 @@
 #define HH(a, b, c, d, m, s, t) a += H(b, c, d) + m + t; a = b + ROTLEFT(a, s);
 #define II(a, b, c, d, m, s, t) a += I(b, c, d) + m + t; a = b + ROTLEFT(a, s);
 
+/**
+ * Performs the actual transformation of data for MD5 hashing.
+ * @param md5  The MD5 context to update.
+ * @param data The data to process. Must be a length of 64.
+ */
 void transform(MD5_Context* md5, unsigned char data[]) {
     uint32_t a;
     uint32_t b;
@@ -129,52 +134,48 @@ void transform(MD5_Context* md5, unsigned char data[]) {
     md5->state[3] += d;
 }
 
-void MD5_init(MD5_Context* md5) {
-    md5->datalen = 0;
-    md5->bitlen = 0;
-
-    md5->state[0] = 0x67452301;
-    md5->state[1] = 0xEFCDAB89;
-    md5->state[2] = 0x98BADCFE;
-    md5->state[3] = 0x10325476;
-}
-
+/**
+ * Performs the final operation on the MD5_Context structure and copies the
+ * resulting hash to the hash buffer. The result in the hash is converted for
+ * use in Little Endian CPU architectures.
+ * @param md5 The MD5_Context structure to finalize.
+ */
 void MD5_final(MD5_Context* md5) {
     uint16_t remain;
 
     // Pad whatever data is left in the buffer.
-    if (md5->datalen < 56) {
-        remain = 56 - md5->datalen;
+    if (md5->bufferLength < 56) {
+        remain = 56 - md5->bufferLength;
         if (remain > 0) {
-            memset(md5->data + md5->datalen, 0, remain);
+            memset(md5->buffer + md5->bufferLength, 0, remain);
         }
 
-        md5->data[md5->datalen] = 0x80;
-    } else if (md5->datalen >= 56) {
-        remain = 64 - md5->datalen;
+        md5->buffer[md5->bufferLength] = 0x80;
+    } else if (md5->bufferLength >= 56) {
+        remain = 64 - md5->bufferLength;
         if (remain > 0) {
-            memset(md5->data + md5->datalen, 0, remain);
+            memset(md5->buffer + md5->bufferLength, 0, remain);
         }
 
-        md5->data[md5->datalen] = 0x80;
-        transform(md5, md5->data);
-        memset(md5->data, 0, 56);
+        md5->buffer[md5->bufferLength] = 0x80;
+        transform(md5, md5->buffer);
+        memset(md5->buffer, 0, 56);
     }
 
-    md5->bitlen += (8 * md5->datalen);
+    md5->bitsProcessed += (8 * md5->bufferLength);
 
     // Append the padding to the total message's length in bits and transform.
-    md5->data[56] =  md5->bitlen & 0xFF;
-    md5->data[57] = (md5->bitlen >>  8) & 0xFF;
-    md5->data[58] = (md5->bitlen >> 16) & 0xFF;
-    md5->data[59] = (md5->bitlen >> 24) & 0xFF;
-    md5->data[60] = (md5->bitlen >> 32) & 0xFF;
-    md5->data[61] = (md5->bitlen >> 40) & 0xFF;
-    md5->data[62] = (md5->bitlen >> 48) & 0xFF;
-    md5->data[63] = (md5->bitlen >> 56) & 0xFF;
+    md5->buffer[56] =  md5->bitsProcessed & 0xFF;
+    md5->buffer[57] = (md5->bitsProcessed >>  8) & 0xFF;
+    md5->buffer[58] = (md5->bitsProcessed >> 16) & 0xFF;
+    md5->buffer[59] = (md5->bitsProcessed >> 24) & 0xFF;
+    md5->buffer[60] = (md5->bitsProcessed >> 32) & 0xFF;
+    md5->buffer[61] = (md5->bitsProcessed >> 40) & 0xFF;
+    md5->buffer[62] = (md5->bitsProcessed >> 48) & 0xFF;
+    md5->buffer[63] = (md5->bitsProcessed >> 56) & 0xFF;
 
     // Transform for the final time.
-    transform(md5, md5->data);
+    transform(md5, md5->buffer);
 
     md5->hash[ 0] =  md5->state[0] & 0xFF;
     md5->hash[ 1] = (md5->state[0] >>  8) & 0xFF;
@@ -194,6 +195,33 @@ void MD5_final(MD5_Context* md5) {
     md5->hash[15] = (md5->state[3] >> 24) & 0xFF;
 }
 
+/**
+ * Initializes a new MD5_Context structure for use with MD5_update.
+ * @param md5 The structure that will be initialized.
+ */
+void MD5_init(MD5_Context* md5) {
+    md5->bufferLength = 0;
+    md5->bitsProcessed = 0;
+
+    md5->state[0] = 0x67452301;
+    md5->state[1] = 0xEFCDAB89;
+    md5->state[2] = 0x98BADCFE;
+    md5->state[3] = 0x10325476;
+}
+
+/**
+ * Updates the MD5 state with the data provided. The MD5_Context structure
+ * should be initialized using the MD5_init function before calling this
+ * function.
+ * @param md5    The structure containing the intermediate MD5 information to
+ *               update.
+ * @param data   The data used to update the MD5 state.
+ * @param length The length of the data to digest.
+ * @remarks
+ * For best performance of this method, attempt to always use a buffer size that
+ * is divisible by 64. Doing this will ensure the most efficient copying of data
+ * for processing.
+ */
 void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
     uint16_t remaining;
 
@@ -204,34 +232,34 @@ void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
 
     // If they gave us data that's divisible by 64 this turned out to be
     // much easier.
-    if (md5->datalen == 0 && length % 64 == 0) {
-        md5->datalen = 64;
+    if (md5->bufferLength == 0 && length % 64 == 0) {
+        md5->bufferLength = 64;
 
         while (length > 0) {
-            memcpy(md5->data, data, 64);
+            memcpy(md5->buffer, data, 64);
             data += 64;
             length -= 64;
 
-            transform(md5, md5->data);
-            md5->bitlen += 512;
+            transform(md5, md5->buffer);
+            md5->bitsProcessed += 512;
         }
 
-        md5->datalen = 0;
+        md5->bufferLength = 0;
         return;
     }
 
     // If the number of bytes to be processed is less than or equal to the
     // remaining space in the buffer, copy it over.
-    remaining = 64 - md5->datalen;
+    remaining = 64 - md5->bufferLength;
     if (length <= remaining) {
-        memcpy(md5->data + md5->datalen, data, length);
-        md5->datalen += length;
+        memcpy(md5->buffer + md5->bufferLength, data, length);
+        md5->bufferLength += length;
 
         // If the data managed to fill us up entirely, process the chunk.
-        if (md5->datalen == 64) {
-            transform(md5, md5->data);
-            md5->bitlen += 512;
-            md5->datalen = 0;
+        if (md5->bufferLength == 64) {
+            transform(md5, md5->buffer);
+            md5->bitsProcessed += 512;
+            md5->bufferLength = 0;
         }
 
         return;
@@ -240,35 +268,35 @@ void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
     // At this point, the data they're giving us is larger than the remaining
     // space in the buffer, so we'll go ahead and copy part of it and process
     // it directly. Remember to reset datalen and update bitlen.
-    memcpy(md5->data + md5->datalen, data, remaining);
-    transform(md5, md5->data);
+    memcpy(md5->buffer + md5->bufferLength, data, remaining);
+    transform(md5, md5->buffer);
     data += remaining;
     length -= remaining;
-    md5->datalen = 0;
-    md5->bitlen += 512;
+    md5->bufferLength = 0;
+    md5->bitsProcessed += 512;
 
     // Now, copy the available data over in 64-byte chunks until we have one
     // chunk remaining that's less than 64 bytes.
     while (length > 64) {
-        memcpy(md5->data, data, 64);
+        memcpy(md5->buffer, data, 64);
         data += 64;
         length -= 64;
 
-        transform(md5, md5->data);
-        md5->bitlen += 512;
+        transform(md5, md5->buffer);
+        md5->bitsProcessed += 512;
     }
 
     // At this point, length should be less than or equal to 64. So copy it over
     // just like we've been doing. Also at this point, since we've been
     // processing 64-byte chunks, datalen is zero, so we copy back at the
     // beginning of the data array.
-    memcpy(md5->data, data, length);
-    md5->datalen = length;
+    memcpy(md5->buffer, data, length);
+    md5->bufferLength = length;
 
     // If they managed to give us a perfect 64 byte chunk, process it.
-    if (md5->datalen == 64) {
-        transform(md5, md5->data);
-        md5->bitlen += 512;
-        md5->datalen = 0;
+    if (md5->bufferLength == 64) {
+        transform(md5, md5->buffer);
+        md5->bitsProcessed += 512;
+        md5->bufferLength = 0;
     }
 }
