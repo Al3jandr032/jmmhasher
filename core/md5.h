@@ -23,14 +23,14 @@
 
 typedef struct {
     unsigned char data[64];
-    unsigned int datalen;
+    uint16_t datalen;
     uint64_t bitlen;
-    unsigned int state[4];
+    uint32_t state[4];
     unsigned char hash[16];
 } MD5_Context;
 
 void MD5_init(MD5_Context* md5);
 void MD5_final(MD5_Context* md5);
-void MD5_update(MD5_Context* md5, unsigned char* data, unsigned int length);
+void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length);
 
 #endif

@@ -33,13 +33,13 @@
 
 
 void transform(MD5_Context* md5, unsigned char data[]) {
-    unsigned int a;
-    unsigned int b;
-    unsigned int c;
-    unsigned int d;
-    unsigned int m[16];
-    unsigned int i;
-    unsigned int j;
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
+    uint32_t m[16];
+    uint32_t i;
+    uint32_t j;
 
     // MD5 specifies big endian byte order, but this implementation assumes a little
     // endian byte order CPU. Reverse all the bytes upon input, and re-reverse them
@@ -141,7 +141,7 @@ void MD5_init(MD5_Context* md5) {
 }
 
 void MD5_final(MD5_Context* md5) {
-    unsigned int i;
+    uint32_t i;
 
     i = md5->datalen;
 
@@ -186,8 +186,8 @@ void MD5_final(MD5_Context* md5) {
     }
 }
 
-void MD5_update(MD5_Context* md5, unsigned char* data, unsigned int length) {
-    unsigned int i;
+void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
+    uint32_t i;
 
     for (i = 0; i < length; ++i) {
         md5->data[md5->datalen] = data[i];
