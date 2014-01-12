@@ -23,14 +23,6 @@
 #include "md4.h"
 #include <string.h>
 
-struct MD4 {
-    uint32_t block[16];
-    unsigned char buffer[64];
-    uint32_t hi;
-    uint32_t lo;
-    uint32_t state[4];
-};
-
 /*
  * The basic MD4 functions.
  *
@@ -207,7 +199,7 @@ void MD4_final(MD4_Context* md4, unsigned char* result) {
     result[14] = (md4->state[3] >> 16) & 0xFF;
     result[15] = (md4->state[3] >> 24) & 0xFF;
 
-    memset(md4, 0, sizeof(struct MD4));
+    memset(md4, 0, sizeof(*md4));
 }
 
 void MD4_init(MD4_Context* md4) {

@@ -25,7 +25,13 @@
 
 #include <stdint.h>
 
-typedef struct MD4 MD4_Context;
+typedef struct {
+    uint32_t block[16];
+    unsigned char buffer[64];
+    uint32_t hi;
+    uint32_t lo;
+    uint32_t state[4];
+} MD4_Context;
 
 void MD4_final(MD4_Context* md4, unsigned char* result);
 

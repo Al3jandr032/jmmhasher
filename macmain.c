@@ -55,7 +55,7 @@ void hash_file_md4(char* filename) {
     }
 
     unsigned char result[16];
-    MD4_final(&md4, &result);
+    MD4_final(&md4, result);
 
     close(file);
 
