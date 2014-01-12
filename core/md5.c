@@ -132,8 +132,7 @@ void transform(MD5_Context* md5, unsigned char data[]) {
 
 void MD5_init(MD5_Context* md5) {
     md5->datalen = 0;
-    md5->bitlen[0] = 0;
-    md5->bitlen[1] = 0;
+    md5->bitlen = 0;
 
     md5->state[0] = 0x67452301;
     md5->state[1] = 0xEFCDAB89;
@@ -162,23 +161,17 @@ void MD5_final(MD5_Context* md5) {
         memset(md5->data, 0, 56);
     }
 
-    // DBL_INT_ADD(md5->bitlen[0], md5->bitlen[1], 8 * md5->datalen);
-    // DBL_INT_ADD(a,b,c) if (a > 0xFFFFFFFF - c) ++b; a += c;
-    if (md5->bitlen[0] > 0xFFFFFFFF - (8 * md5->datalen)) {
-        ++md5->bitlen[1];
-    }
-
-    md5->bitlen[0] = md5->bitlen[0] + (8 * md5->datalen);
+    md5->bitlen += (8 * md5->datalen);
 
     // Append the padding to the total message's length in bits and transform.
-    md5->data[56] = md5->bitlen[0] & 0xFF;
-    md5->data[57] = (md5->bitlen[0] >>  8) & 0xFF;
-    md5->data[58] = (md5->bitlen[0] >> 16) & 0xFF;
-    md5->data[59] = (md5->bitlen[0] >> 24) & 0xFF;
-    md5->data[60] = md5->bitlen[1] & 0xFF;
-    md5->data[61] = (md5->bitlen[1] >>  8) & 0xFF;
-    md5->data[62] = (md5->bitlen[1] >> 16) & 0xFF;
-    md5->data[63] = (md5->bitlen[1] >> 24) & 0xFF;
+    md5->data[56] =  md5->bitlen & 0xFF;
+    md5->data[57] = (md5->bitlen >>  8) & 0xFF;
+    md5->data[58] = (md5->bitlen >> 16) & 0xFF;
+    md5->data[59] = (md5->bitlen >> 24) & 0xFF;
+    md5->data[60] = (md5->bitlen >> 32) & 0xFF;
+    md5->data[61] = (md5->bitlen >> 40) & 0xFF;
+    md5->data[62] = (md5->bitlen >> 48) & 0xFF;
+    md5->data[63] = (md5->bitlen >> 56) & 0xFF;
 
     // Transform for the final time.
     transform(md5, md5->data);
@@ -201,14 +194,7 @@ void MD5_update(MD5_Context* md5, unsigned char* data, unsigned int length) {
         md5->datalen++;
         if (md5->datalen == 64) {
             transform(md5, md5->data);
-
-            // DBL_INT_ADD(md5->bitlen[0], md5->bitlen[1], 512);
-            // DBL_INT_ADD(a,b,c) if (a > 0xFFFFFFFF - c) ++b; a += c;
-            if (md5->bitlen[0] > 0xFFFFFFFF - 512) {
-                ++md5->bitlen[1];
-            }
-
-            md5->bitlen[0] = md5->bitlen[0] + 512;
+            md5->bitlen += 512;
             md5->datalen = 0;
         }
     }

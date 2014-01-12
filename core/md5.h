@@ -19,10 +19,12 @@
 #ifndef __JMMHASHER_MD5_H_
 #define __JMMHASHER_MD5_H_
 
+#include <stdint.h>
+
 typedef struct {
     unsigned char data[64];
     unsigned int datalen;
-    unsigned int bitlen[2];
+    uint64_t bitlen;
     unsigned int state[4];
     unsigned char hash[16];
 } MD5_Context;
