@@ -187,15 +187,80 @@ void MD5_final(MD5_Context* md5) {
 }
 
 void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
-    uint32_t i;
+    uint16_t remaining;
 
-    for (i = 0; i < length; ++i) {
-        md5->data[md5->datalen] = data[i];
-        md5->datalen++;
+    // Take care of the easy situation first.
+    if (length == 0) {
+        return;
+    }
+
+    // If they gave us data that's divisible by 64 this turned out to be
+    // much easier.
+    if (md5->datalen == 0 && length % 64 == 0) {
+        md5->datalen = 64;
+
+        while (length > 0) {
+            memcpy(md5->data, data, 64);
+            data += 64;
+            length -= 64;
+
+            transform(md5, md5->data);
+            md5->bitlen += 512;
+        }
+
+        md5->datalen = 0;
+        return;
+    }
+
+    // If the number of bytes to be processed is less than or equal to the
+    // remaining space in the buffer, copy it over.
+    remaining = 64 - md5->datalen;
+    if (length <= remaining) {
+        memcpy(md5->data + md5->datalen, data, length);
+        md5->datalen += length;
+
+        // If the data managed to fill us up entirely, process the chunk.
         if (md5->datalen == 64) {
             transform(md5, md5->data);
             md5->bitlen += 512;
             md5->datalen = 0;
         }
+
+        return;
+    }
+
+    // At this point, the data they're giving us is larger than the remaining
+    // space in the buffer, so we'll go ahead and copy part of it and process
+    // it directly. Remember to reset datalen and update bitlen.
+    memcpy(md5->data + md5->datalen, data, remaining);
+    transform(md5, md5->data);
+    data += remaining;
+    length -= remaining;
+    md5->datalen = 0;
+    md5->bitlen += 512;
+
+    // Now, copy the available data over in 64-byte chunks until we have one
+    // chunk remaining that's less than 64 bytes.
+    while (length > 64) {
+        memcpy(md5->data, data, 64);
+        data += 64;
+        length -= 64;
+
+        transform(md5, md5->data);
+        md5->bitlen += 512;
+    }
+
+    // At this point, length should be less than or equal to 64. So copy it over
+    // just like we've been doing. Also at this point, since we've been
+    // processing 64-byte chunks, datalen is zero, so we copy back at the
+    // beginning of the data array.
+    memcpy(md5->data, data, length);
+    md5->datalen = length;
+
+    // If they managed to give us a perfect 64 byte chunk, process it.
+    if (md5->datalen == 64) {
+        transform(md5, md5->data);
+        md5->bitlen += 512;
+        md5->datalen = 0;
     }
 }
