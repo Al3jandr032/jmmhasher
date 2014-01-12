@@ -1,6 +1,13 @@
 #include "core/crc32.h"
 #include "core/md5.h"
+#include "core/md4.h"
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 /**
  * Computes the CRC32 on the contents of the provided file.
@@ -32,28 +39,29 @@ void hash_file_crc32(char* filename) {
     printf(" %s\n", filename);
 }
 
-void hash_file_md5(char* filename) {
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        fprintf(stderr, "%s cannot be opened.\n", filename);
-        return;
+void hash_file_md4(char* filename) {
+    int file = open(filename, O_RDONLY | O_SHLOCK);
+    if (file == -1) {
+        fprintf(stderr, "Unable to open file %s: %s\n", filename, strerror(errno));
     }
 
-    MD5_Context md5;
-    MD5_init(&md5);
+    MD4_Context md4;
+    MD4_init(&md4);
 
-    int bytes;
+    int bytesRead;
     unsigned char data[1024];
-    while ((bytes = fread(data, 1, 1024, file)) != 0) {
-        MD5_update(&md5, data, bytes);
+    while ((bytesRead = read(file, data, 1024)) != 0) {
+        MD4_update(&md4, data, bytesRead);
     }
-    MD5_final(&md5);
 
-    fclose(file);
+    unsigned char result[16];
+    MD4_final(&md4, &result);
+
+    close(file);
 
     printf("  ");
     for (int i = 0; i < 16; ++i) {
-        printf("%02x", md5.hash[i]);
+        printf("%02x", result[i]);
     }
     printf(" %s\n", filename);
 }
@@ -103,7 +111,8 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         //hash_file_crc32(argv[i]);
-        hash_file_md5(argv[i]);
+        //hash_file_md5(argv[i]);
+        hash_file_md4(argv[i]);
     }
 
     return 0;
