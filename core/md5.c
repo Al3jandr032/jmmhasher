@@ -164,7 +164,7 @@ void MD5_final(MD5_Context* md5) {
 
     // DBL_INT_ADD(md5->bitlen[0], md5->bitlen[1], 8 * md5->datalen);
     // DBL_INT_ADD(a,b,c) if (a > 0xFFFFFFFF - c) ++b; a += c;
-    if (md5->bitlen[0] > 0xFFFFFFFF - md5->bitlen[1]) {
+    if (md5->bitlen[0] > 0xFFFFFFFF - (8 * md5->datalen)) {
         ++md5->bitlen[1];
     }
 
@@ -204,7 +204,7 @@ void MD5_update(MD5_Context* md5, unsigned char* data, unsigned int length) {
 
             // DBL_INT_ADD(md5->bitlen[0], md5->bitlen[1], 512);
             // DBL_INT_ADD(a,b,c) if (a > 0xFFFFFFFF - c) ++b; a += c;
-            if (md5->bitlen[0] > 0xFFFFFFFF - md5->bitlen[1]) {
+            if (md5->bitlen[0] > 0xFFFFFFFF - 512) {
                 ++md5->bitlen[1];
             }
 
