@@ -13,7 +13,7 @@ void hash_file_crc32(char* filename) {
         return;
     }
 
-    CRC32 crc;
+    CRC32_Context crc;
     CRC32_init(&crc);
 
     int bytes;
@@ -32,6 +32,10 @@ void hash_file_crc32(char* filename) {
     printf(" %s\n", filename);
 }
 
+/**
+ * Computes the MD5 on the contents of the provided file.
+ * @param filename The name of the file to process.
+ */
 void hash_file_md5(char* filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {

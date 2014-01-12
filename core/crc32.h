@@ -24,34 +24,34 @@
  * calculating the CRC32 of data.
  * @field digest Holds the intermediate digest as the CRC32 is computed.
  * @field hash   Holds the final result of the CRC32 digest converted for
- *               Big Endian architectures.
+ *               Little Endian architectures.
  */
 typedef struct {
     unsigned int digest;
     unsigned char hash[4];
-} CRC32;
+} CRC32_Context;
 
 /**
- * Performs the final operation on the CRC32 structure and copies the result
- * to the hash char buffer. The result stored in hash is converted for Big
- * Endian architectures.
+ * Performs the final operation on the CRC32_Context structure and copies the
+ * result to the hash char buffer. The result stored in hash is converted for
+ * Little Endian architectures.
  * @param crc The CRC32 structure to finalize.
  */
-void CRC32_final(CRC32* crc);
+void CRC32_final(CRC32_Context* crc);
 
 /**
- * Initializes a new CRC32 structure for use with CRC32_update.
+ * Initializes a new CRC32_Context structure for use with CRC32_update.
  * @param crc The structure that will be initialized.
  */
-void CRC32_init(CRC32* crc);
+void CRC32_init(CRC32_Context* crc);
 
 /**
- * Update the CRC with the data provided. The CRC should be initialized
- * using CRC32_init before calling this function.
+ * Update the CRC with the data provided. The CRC_Context structure should be
+ * initialized using CRC32_init before calling this function.
  * @param crc    The structure containing the CRC digest to update.
  * @param data   The data used to update the CRC digest.
  * @param length The length of the data to digest.
  */
-void CRC32_update(CRC32* crc, unsigned char* buf, int length);
+void CRC32_update(CRC32_Context* crc, unsigned char* buf, int length);
 
 #endif
