@@ -26,11 +26,10 @@
 #define H(x, y, z) (x ^ y ^ z)
 #define I(x, y, z) (y ^ (x | ~z))
 
-#define FF(a,b,c,d,m,s,t) { a += F(b, c, d) + m + t; a = b + ROTLEFT(a, s); }
-#define GG(a,b,c,d,m,s,t) { a += G(b, c, d) + m + t; a = b + ROTLEFT(a, s); }
-#define HH(a,b,c,d,m,s,t) { a += H(b, c, d) + m + t; a = b + ROTLEFT(a, s); }
-#define II(a,b,c,d,m,s,t) { a += I(b, c, d) + m + t; a = b + ROTLEFT(a, s); }
-
+#define FF(a, b, c, d, m, s, t) a += F(b, c, d) + m + t; a = b + ROTLEFT(a, s);
+#define GG(a, b, c, d, m, s, t) a += G(b, c, d) + m + t; a = b + ROTLEFT(a, s);
+#define HH(a, b, c, d, m, s, t) a += H(b, c, d) + m + t; a = b + ROTLEFT(a, s);
+#define II(a, b, c, d, m, s, t) a += I(b, c, d) + m + t; a = b + ROTLEFT(a, s);
 
 void transform(MD5_Context* md5, unsigned char data[]) {
     uint32_t a;
@@ -41,9 +40,9 @@ void transform(MD5_Context* md5, unsigned char data[]) {
     uint32_t i;
     uint32_t j;
 
-    // MD5 specifies big endian byte order, but this implementation assumes a little
-    // endian byte order CPU. Reverse all the bytes upon input, and re-reverse them
-    // on output (in MD5_final()).
+    // Since we're processing data using little edian types, we need to reverse
+    // the order of the incoming bytes for processing. On the final output, we
+    // will re-reverse them to get the proper output.
     for (i = 0, j = 0; i < 16; ++i, j += 4) {
         m[i] = (data[j]) +
                (data[j + 1] <<  8) +
