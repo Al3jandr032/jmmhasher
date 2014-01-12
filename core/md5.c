@@ -151,7 +151,7 @@ void MD5_final(MD5_Context* md5) {
         while (i < 56) {
             md5->data[i++] = 0x00;
         }
-    } else if (md5->datalen >= 56 && md5->datalen < 64) {
+    } else if (md5->datalen >= 56) {
         md5->data[i++] = 0x80;
         while (i < 64) {
             md5->data[i++] = 0x00;
@@ -176,14 +176,22 @@ void MD5_final(MD5_Context* md5) {
     // Transform for the final time.
     transform(md5, md5->data);
 
-    // Since this implementation uses little endian byte ordering and MD uses big endian,
-    // reverse all the bytes when copying the final state to the output hash.
-    for (i = 0; i < 4; ++i) {
-        md5->hash[i]      = (md5->state[0] >> (i * 8)) & 0xFF;
-        md5->hash[i + 4]  = (md5->state[1] >> (i * 8)) & 0xFF;
-        md5->hash[i + 8]  = (md5->state[2] >> (i * 8)) & 0xFF;
-        md5->hash[i + 12] = (md5->state[3] >> (i * 8)) & 0xFF;
-    }
+    md5->hash[ 0] =  md5->state[0] & 0xFF;
+    md5->hash[ 1] = (md5->state[0] >>  8) & 0xFF;
+    md5->hash[ 2] = (md5->state[0] >> 16) & 0xFF;
+    md5->hash[ 3] = (md5->state[0] >> 24) & 0xFF;
+    md5->hash[ 4] =  md5->state[1] & 0xFF;
+    md5->hash[ 5] = (md5->state[1] >>  8) & 0xFF;
+    md5->hash[ 6] = (md5->state[1] >> 16) & 0xFF;
+    md5->hash[ 7] = (md5->state[1] >> 24) & 0xFF;
+    md5->hash[ 8] =  md5->state[2] & 0xFF;
+    md5->hash[ 9] = (md5->state[2] >>  8) & 0xFF;
+    md5->hash[10] = (md5->state[2] >> 16) & 0xFF;
+    md5->hash[11] = (md5->state[2] >> 24) & 0xFF;
+    md5->hash[12] =  md5->state[3] & 0xFF;
+    md5->hash[13] = (md5->state[3] >>  8) & 0xFF;
+    md5->hash[14] = (md5->state[3] >> 16) & 0xFF;
+    md5->hash[15] = (md5->state[3] >> 24) & 0xFF;
 }
 
 void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
