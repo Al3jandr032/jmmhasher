@@ -39,6 +39,9 @@ void hash_file_crc32(char* filename) {
     printf(" %s\n", filename);
 }
 
+/** Computes the MD4 on the contents of the provided file.
+ * @param filename The name of the file to process.
+ */
 void hash_file_md4(char* filename) {
     int file = open(filename, O_RDONLY | O_SHLOCK);
     if (file == -1) {

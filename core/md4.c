@@ -23,8 +23,7 @@
 #include "md4.h"
 #include <string.h>
 
-/*
- * The basic MD4 functions.
+/* The basic MD4 functions.
  *
  * F and G are optimized compared to their RFC 1320 definitions, with the
  * optimization for F borrowed from Colin Plumb's MD5 implementation.
@@ -33,15 +32,12 @@
 #define G(x, y, z) (((x) & ((y) | (z))) | ((y) & (z)))
 #define H(x, y, z) ((x) ^ (y) ^ (z))
 
-/*
- * The MD4 transformation for all three rounds.
- */
+/* The MD4 transformation for all three rounds. */
 #define STEP(f, a, b, c, d, x, s) \
     (a) += f((b), (c), (d)) + (x); \
     (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s))));
 
-/*
- * SET reads 4 input bytes in little-endian byte order and stores them
+/* SET reads 4 input bytes in little-endian byte order and stores them
  * in a properly aligned word in host byte order.
  *
  * The check for little-endian architectures that tolerate unaligned
@@ -60,6 +56,14 @@
 #define GET(n) (md4->block[(n)])
 #endif
 
+/**
+ * Performs the actual transformation of data for MD4 hashing in 64 byte blocks.
+ * @param md4    The MD4 context to update.
+ * @param data   The data to process.
+ * @param length The length of the data to process. Must be a multiple of 64.
+ * @returns Returns a pointer to any remaining data that didn't fit in a 64-byte
+ *          block. The remaining data will always be less than 64 bytes.
+ */
 static const void* transform(MD4_Context* md4, const void* data, uint32_t length) {
     const unsigned char* ptr;
     uint32_t a;
@@ -153,6 +157,16 @@ static const void* transform(MD4_Context* md4, const void* data, uint32_t length
     return ptr;
 }
 
+/**
+ * Performs the final operation on the MD4_Context structure, copies the
+ * resulting hash to the array pointed to by result and clears the structure. If
+ * the structure is to be reused, it needs to be initialized again.
+ * @param md4    The MD4_Context structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
+ * @remarks The result provided is converted for use in Little Endian CPU
+ *          architectures.
+ */
 void MD4_final(MD4_Context* md4, unsigned char* result) {
     uint16_t used;
     uint16_t available;
@@ -202,6 +216,10 @@ void MD4_final(MD4_Context* md4, unsigned char* result) {
     memset(md4, 0, sizeof(*md4));
 }
 
+/**
+ * Initializes a MD4_Context structure for use with MD4_Update.
+ * @param md4 The structure to initialize.
+ */
 void MD4_init(MD4_Context* md4) {
     md4->lo = 0;
     md4->hi = 0;
@@ -212,6 +230,15 @@ void MD4_init(MD4_Context* md4) {
     md4->state[3] = 0x10325476;
 }
 
+/**
+ * Updates the MD4 state with the data provided. The MD4_Context structure
+ * should be initialized using the MD4_init function before calling this
+ * function.
+ * @param md4    The structure containing the intermediate MD4 information to
+ *               update.
+ * @param data   The data used to update the MD4 state.
+ * @param length The length of the data to digest.
+ */
 void MD4_update(MD4_Context* md4, const void* data, uint32_t length) {
     uint32_t saved_lo;
     uint32_t used;

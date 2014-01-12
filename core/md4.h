@@ -25,18 +25,54 @@
 
 #include <stdint.h>
 
+/**
+ * Structure containing the intermediate state information for calculating the
+ * MD4 hash of data.
+ * @field hi     Holds the high 32-bits of the total bits of data processed.
+ * @field lo     Holds the low 32-bits of the total bits of data processed.
+ * @field state  Holds the transformation state between transformation calls.
+ * @field buffer Holds the data to be transformed when processing data at odd
+ *               offsets.
+ * @field block  Only defined for little-endian architectures that don't
+ *               tolerate unaligned memory accesses. Used by the GET/SET macros.
+ */
 typedef struct {
-    uint32_t block[16];
-    unsigned char buffer[64];
     uint32_t hi;
     uint32_t lo;
     uint32_t state[4];
+    unsigned char buffer[64];
+    #if !defined(__i386) && !defined(__x86_64__) && !defined(__vax__)
+    uint32_t block[16];
+    #endif
 } MD4_Context;
 
+/**
+ * Performs the final operation on the MD4_Context structure, copies the
+ * resulting hash to the array pointed to by result and clears the structure. If
+ * the structure is to be reused, it needs to be initialized again.
+ * @param md4    The MD4_Context structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
+ * @remarks The result provided is converted for use in Little Endian CPU
+ *          architectures.
+ */
 void MD4_final(MD4_Context* md4, unsigned char* result);
 
+/**
+ * Initializes a MD4_Context structure for use with MD4_Update.
+ * @param md4 The structure to initialize.
+ */
 void MD4_init(MD4_Context* md4);
 
+/**
+ * Updates the MD4 state with the data provided. The MD4_Context structure
+ * should be initialized using the MD4_init function before calling this
+ * function.
+ * @param md4    The structure containing the intermediate MD4 information to
+ *               update.
+ * @param data   The data used to update the MD4 state.
+ * @param length The length of the data to digest.
+ */
 void MD4_update(MD4_Context* md4, const void* data, uint32_t length);
 
 #endif
