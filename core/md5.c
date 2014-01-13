@@ -16,183 +16,228 @@
  * http://www.gnu.org/licenses/.
  */
 
+/* This MD5 implementation has been adapted from the public domain reference at
+ * http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
+ */
+
 #include "md5.h"
 #include "string.h"
 
-#define ROTLEFT(a,b) ((a << b) | (a >> (32 - b)))
+/* The basic MD5 functions.
+ *
+ * F and G are optimized compared to their RFC 1321 definitions for
+ * architectures that lack an AND-NOT instruction, just like in Colin Plumb's
+ * implementation.
+ */
+#define F(x, y, z)  ((z) ^ ((x) & ((y) ^ (z))))
+#define G(x, y, z)  ((y) ^ ((z) & ((x) ^ (y))))
+#define H(x, y, z)  (((x) ^ (y)) ^ (z))
+#define H2(x, y, z) ((x) ^ ((y) ^ (z)))
+#define I(x, y, z)  ((y) ^ ((x) | ~(z)))
 
-#define F(x, y, z) ((x & y) | (~x & z))
-#define G(x, y, z) ((x & z) | (y & ~z))
-#define H(x, y, z) (x ^ y ^ z)
-#define I(x, y, z) (y ^ (x | ~z))
+/* The MD5 transformation for all four rounds. */
+#define STEP(f, a, b, c, d, x, t, s) \
+    (a) += f((b), (c), (d)) + (x) + (t); \
+    (a) = (((a) << (s)) | (((a) & 0xffffffff) >> (32 - (s)))); \
+    (a) += (b);
 
-#define FF(a, b, c, d, m, s, t) a += F(b, c, d) + m + t; a = b + ROTLEFT(a, s);
-#define GG(a, b, c, d, m, s, t) a += G(b, c, d) + m + t; a = b + ROTLEFT(a, s);
-#define HH(a, b, c, d, m, s, t) a += H(b, c, d) + m + t; a = b + ROTLEFT(a, s);
-#define II(a, b, c, d, m, s, t) a += I(b, c, d) + m + t; a = b + ROTLEFT(a, s);
+/* SET reads 4 input bytes in little-endian byte order and stores them
+ * in a properly aligned word in host byte order.
+ *
+ * The check for little-endian architectures that tolerate unaligned
+ * memory accesses is just an optimization.  Nothing will break if it
+ * doesn't work.
+ */
+#if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
+#define SET(n) (*(uint32_t *)&ptr[(n) * 4])
+#define GET(n) SET(n)
+#else
+#define SET(n) (md5->block[(n)] = \
+    (uint32_t)ptr[(n) * 4] | \
+    ((uint32_t)ptr[(n) * 4 + 1] << 8) | \
+    ((uint32_t)ptr[(n) * 4 + 2] << 16) | \
+    ((uint32_t)ptr[(n) * 4 + 3] << 24))
+#define GET(n) (md5->block[(n)])
+#endif
 
 /**
- * Performs the actual transformation of data for MD5 hashing.
- * @param md5  The MD5 context to update.
- * @param data The data to process. Must be a length of 64.
+ * Performs the actual transformation of data for MD5 hashing in 64 byte blocks.
+ * @param md5    The MD5 context to update.
+ * @param data   The data to process.
+ * @param length The length of the data to process. Must be a multiple of 64.
+ * @returns Returns a pointer to any remaining data that didn't fit in a 64-byte
+ *          block. The remaining data will always be less than 64 bytes.
  */
-void transform(MD5_Context* md5, unsigned char data[]) {
+static const void* transform(MD5_Context* md5, const void* data, uint32_t length) {
+    const unsigned char* ptr;
     uint32_t a;
     uint32_t b;
     uint32_t c;
     uint32_t d;
-    uint32_t m[16];
-    uint32_t i;
-    uint32_t j;
+    uint32_t saved_a;
+    uint32_t saved_b;
+    uint32_t saved_c;
+    uint32_t saved_d;
 
-    // Since we're processing data using little edian types, we need to reverse
-    // the order of the incoming bytes for processing. On the final output, we
-    // will re-reverse them to get the proper output.
-    for (i = 0, j = 0; i < 16; ++i, j += 4) {
-        m[i] = (data[j]) +
-               (data[j + 1] <<  8) +
-               (data[j + 2] << 16) +
-               (data[j + 3] << 24);
-    }
-
+    ptr = (unsigned char*)data;
     a = md5->state[0];
     b = md5->state[1];
     c = md5->state[2];
     d = md5->state[3];
 
-    FF(a, b, c, d, m[0],   7, 0xd76aa478);
-    FF(d, a, b, c, m[1],  12, 0xe8c7b756);
-    FF(c, d, a, b, m[2],  17, 0x242070db);
-    FF(b, c, d, a, m[3],  22, 0xc1bdceee);
-    FF(a, b, c, d, m[4],   7, 0xf57c0faf);
-    FF(d, a, b, c, m[5],  12, 0x4787c62a);
-    FF(c, d, a, b, m[6],  17, 0xa8304613);
-    FF(b, c, d, a, m[7],  22, 0xfd469501);
-    FF(a, b, c, d, m[8],   7, 0x698098d8);
-    FF(d, a, b, c, m[9],  12, 0x8b44f7af);
-    FF(c, d, a, b, m[10], 17, 0xffff5bb1);
-    FF(b, c, d, a, m[11], 22, 0x895cd7be);
-    FF(a, b, c, d, m[12],  7, 0x6b901122);
-    FF(d, a, b, c, m[13], 12, 0xfd987193);
-    FF(c, d, a, b, m[14], 17, 0xa679438e);
-    FF(b, c, d, a, m[15], 22, 0x49b40821);
 
-    GG(a, b, c, d, m[1],   5, 0xf61e2562);
-    GG(d, a, b, c, m[6],   9, 0xc040b340);
-    GG(c, d, a, b, m[11], 14, 0x265e5a51);
-    GG(b, c, d, a, m[0],  20, 0xe9b6c7aa);
-    GG(a, b, c, d, m[5],   5, 0xd62f105d);
-    GG(d, a, b, c, m[10],  9, 0x02441453);
-    GG(c, d, a, b, m[15], 14, 0xd8a1e681);
-    GG(b, c, d, a, m[4],  20, 0xe7d3fbc8);
-    GG(a, b, c, d, m[9],   5, 0x21e1cde6);
-    GG(d, a, b, c, m[14],  9, 0xc33707d6);
-    GG(c, d, a, b, m[3],  14, 0xf4d50d87);
-    GG(b, c, d, a, m[8],  20, 0x455a14ed);
-    GG(a, b, c, d, m[13],  5, 0xa9e3e905);
-    GG(d, a, b, c, m[2],   9, 0xfcefa3f8);
-    GG(c, d, a, b, m[7],  14, 0x676f02d9);
-    GG(b, c, d, a, m[12], 20, 0x8d2a4c8a);
+   do {
+        saved_a = a;
+        saved_b = b;
+        saved_c = c;
+        saved_d = d;
 
-    HH(a, b, c, d, m[5],   4, 0xfffa3942);
-    HH(d, a, b, c, m[8],  11, 0x8771f681);
-    HH(c, d, a, b, m[11], 16, 0x6d9d6122);
-    HH(b, c, d, a, m[14], 23, 0xfde5380c);
-    HH(a, b, c, d, m[1],   4, 0xa4beea44);
-    HH(d, a, b, c, m[4],  11, 0x4bdecfa9);
-    HH(c, d, a, b, m[7],  16, 0xf6bb4b60);
-    HH(b, c, d, a, m[10], 23, 0xbebfbc70);
-    HH(a, b, c, d, m[13],  4, 0x289b7ec6);
-    HH(d, a, b, c, m[0],  11, 0xeaa127fa);
-    HH(c, d, a, b, m[3],  16, 0xd4ef3085);
-    HH(b, c, d, a, m[6],  23, 0x04881d05);
-    HH(a, b, c, d, m[9],   4, 0xd9d4d039);
-    HH(d, a, b, c, m[12], 11, 0xe6db99e5);
-    HH(c, d, a, b, m[15], 16, 0x1fa27cf8);
-    HH(b, c, d, a, m[2],  23, 0xc4ac5665);
+        /* Round 1 */
+        STEP(F, a, b, c, d, SET( 0), 0xd76aa478,  7)
+        STEP(F, d, a, b, c, SET( 1), 0xe8c7b756, 12)
+        STEP(F, c, d, a, b, SET( 2), 0x242070db, 17)
+        STEP(F, b, c, d, a, SET( 3), 0xc1bdceee, 22)
+        STEP(F, a, b, c, d, SET( 4), 0xf57c0faf,  7)
+        STEP(F, d, a, b, c, SET( 5), 0x4787c62a, 12)
+        STEP(F, c, d, a, b, SET( 6), 0xa8304613, 17)
+        STEP(F, b, c, d, a, SET( 7), 0xfd469501, 22)
+        STEP(F, a, b, c, d, SET( 8), 0x698098d8,  7)
+        STEP(F, d, a, b, c, SET( 9), 0x8b44f7af, 12)
+        STEP(F, c, d, a, b, SET(10), 0xffff5bb1, 17)
+        STEP(F, b, c, d, a, SET(11), 0x895cd7be, 22)
+        STEP(F, a, b, c, d, SET(12), 0x6b901122,  7)
+        STEP(F, d, a, b, c, SET(13), 0xfd987193, 12)
+        STEP(F, c, d, a, b, SET(14), 0xa679438e, 17)
+        STEP(F, b, c, d, a, SET(15), 0x49b40821, 22)
 
-    II(a, b, c, d, m[0],   6, 0xf4292244);
-    II(d, a, b, c, m[7],  10, 0x432aff97);
-    II(c, d, a, b, m[14], 15, 0xab9423a7);
-    II(b, c, d, a, m[5],  21, 0xfc93a039);
-    II(a, b, c, d, m[12],  6, 0x655b59c3);
-    II(d, a, b, c, m[3],  10, 0x8f0ccc92);
-    II(c, d, a, b, m[10], 15, 0xffeff47d);
-    II(b, c, d, a, m[1],  21, 0x85845dd1);
-    II(a, b, c, d, m[8],   6, 0x6fa87e4f);
-    II(d, a, b, c, m[15], 10, 0xfe2ce6e0);
-    II(c, d, a, b, m[6],  15, 0xa3014314);
-    II(b, c, d, a, m[13], 21, 0x4e0811a1);
-    II(a, b, c, d, m[4],   6, 0xf7537e82);
-    II(d, a, b, c, m[11], 10, 0xbd3af235);
-    II(c, d, a, b, m[2],  15, 0x2ad7d2bb);
-    II(b, c, d, a, m[9],  21, 0xeb86d391);
+        /* Round 2 */
+        STEP(G, a, b, c, d, GET( 1), 0xf61e2562,  5)
+        STEP(G, d, a, b, c, GET( 6), 0xc040b340,  9)
+        STEP(G, c, d, a, b, GET(11), 0x265e5a51, 14)
+        STEP(G, b, c, d, a, GET( 0), 0xe9b6c7aa, 20)
+        STEP(G, a, b, c, d, GET( 5), 0xd62f105d,  5)
+        STEP(G, d, a, b, c, GET(10), 0x02441453,  9)
+        STEP(G, c, d, a, b, GET(15), 0xd8a1e681, 14)
+        STEP(G, b, c, d, a, GET( 4), 0xe7d3fbc8, 20)
+        STEP(G, a, b, c, d, GET( 9), 0x21e1cde6,  5)
+        STEP(G, d, a, b, c, GET(14), 0xc33707d6,  9)
+        STEP(G, c, d, a, b, GET( 3), 0xf4d50d87, 14)
+        STEP(G, b, c, d, a, GET( 8), 0x455a14ed, 20)
+        STEP(G, a, b, c, d, GET(13), 0xa9e3e905,  5)
+        STEP(G, d, a, b, c, GET( 2), 0xfcefa3f8,  9)
+        STEP(G, c, d, a, b, GET( 7), 0x676f02d9, 14)
+        STEP(G, b, c, d, a, GET(12), 0x8d2a4c8a, 20)
 
-    md5->state[0] += a;
-    md5->state[1] += b;
-    md5->state[2] += c;
-    md5->state[3] += d;
+        /* Round 3 */
+        STEP(H,  a, b, c, d, GET( 5), 0xfffa3942,  4)
+        STEP(H2, d, a, b, c, GET( 8), 0x8771f681, 11)
+        STEP(H,  c, d, a, b, GET(11), 0x6d9d6122, 16)
+        STEP(H2, b, c, d, a, GET(14), 0xfde5380c, 23)
+        STEP(H,  a, b, c, d, GET( 1), 0xa4beea44,  4)
+        STEP(H2, d, a, b, c, GET( 4), 0x4bdecfa9, 11)
+        STEP(H,  c, d, a, b, GET( 7), 0xf6bb4b60, 16)
+        STEP(H2, b, c, d, a, GET(10), 0xbebfbc70, 23)
+        STEP(H,  a, b, c, d, GET(13), 0x289b7ec6,  4)
+        STEP(H2, d, a, b, c, GET( 0), 0xeaa127fa, 11)
+        STEP(H,  c, d, a, b, GET( 3), 0xd4ef3085, 16)
+        STEP(H2, b, c, d, a, GET( 6), 0x04881d05, 23)
+        STEP(H,  a, b, c, d, GET( 9), 0xd9d4d039,  4)
+        STEP(H2, d, a, b, c, GET(12), 0xe6db99e5, 11)
+        STEP(H,  c, d, a, b, GET(15), 0x1fa27cf8, 16)
+        STEP(H2, b, c, d, a, GET( 2), 0xc4ac5665, 23)
+
+        /* Round 4 */
+        STEP(I, a, b, c, d, GET( 0), 0xf4292244,  6)
+        STEP(I, d, a, b, c, GET( 7), 0x432aff97, 10)
+        STEP(I, c, d, a, b, GET(14), 0xab9423a7, 15)
+        STEP(I, b, c, d, a, GET( 5), 0xfc93a039, 21)
+        STEP(I, a, b, c, d, GET(12), 0x655b59c3,  6)
+        STEP(I, d, a, b, c, GET( 3), 0x8f0ccc92, 10)
+        STEP(I, c, d, a, b, GET(10), 0xffeff47d, 15)
+        STEP(I, b, c, d, a, GET( 1), 0x85845dd1, 21)
+        STEP(I, a, b, c, d, GET( 8), 0x6fa87e4f,  6)
+        STEP(I, d, a, b, c, GET(15), 0xfe2ce6e0, 10)
+        STEP(I, c, d, a, b, GET( 6), 0xa3014314, 15)
+        STEP(I, b, c, d, a, GET(13), 0x4e0811a1, 21)
+        STEP(I, a, b, c, d, GET( 4), 0xf7537e82,  6)
+        STEP(I, d, a, b, c, GET(11), 0xbd3af235, 10)
+        STEP(I, c, d, a, b, GET( 2), 0x2ad7d2bb, 15)
+        STEP(I, b, c, d, a, GET( 9), 0xeb86d391, 21)
+
+        a += saved_a;
+        b += saved_b;
+        c += saved_c;
+        d += saved_d;
+
+        ptr += 64;
+    } while (length -= 64);
+
+    md5->state[0] = a;
+    md5->state[1] = b;
+    md5->state[2] = c;
+    md5->state[3] = d;
+
+    return ptr;
 }
 
 /**
- * Performs the final operation on the MD5_Context structure and copies the
- * resulting hash to the hash buffer. The result in the hash is converted for
- * use in Little Endian CPU architectures.
- * @param md5 The MD5_Context structure to finalize.
+ * Performs the final operation on the MD5_Context structure, copies the
+ * resulting hash to the array pointed to by result and clears the structure. If
+ * the structure is to be reused, it needs to be initialized again.
+ * @param md5    The MD5_Context structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
+ * @remarks The result provided is converted for use in Little Endian CPU
+ *          architectures.
  */
-void MD5_final(MD5_Context* md5) {
-    uint16_t remain;
+void MD5_final(MD5_Context* md5, unsigned char* result) {
+    uint32_t used;
+    uint32_t available;
 
-    // Pad whatever data is left in the buffer.
-    if (md5->bufferLength < 56) {
-        remain = 56 - md5->bufferLength;
-        if (remain > 0) {
-            memset(md5->buffer + md5->bufferLength, 0, remain);
-        }
+    used = md5->lo & 0x3F;
+    md5->buffer[used++] = 0x80;
+    available = 64 - used;
 
-        md5->buffer[md5->bufferLength] = 0x80;
-    } else if (md5->bufferLength >= 56) {
-        remain = 64 - md5->bufferLength;
-        if (remain > 0) {
-            memset(md5->buffer + md5->bufferLength, 0, remain);
-        }
-
-        md5->buffer[md5->bufferLength] = 0x80;
-        transform(md5, md5->buffer);
-        memset(md5->buffer, 0, 56);
+    if (available < 8) {
+        memset(&md5->buffer[used], 0, available);
+        transform(md5, md5->buffer, 64);
+        used = 0;
+        available = 64;
     }
 
-    md5->bitsProcessed += (8 * md5->bufferLength);
+    memset(&md5->buffer[used], 0, available - 8);
 
-    // Append the padding to the total message's length in bits and transform.
-    md5->buffer[56] =  md5->bitsProcessed & 0xFF;
-    md5->buffer[57] = (md5->bitsProcessed >>  8) & 0xFF;
-    md5->buffer[58] = (md5->bitsProcessed >> 16) & 0xFF;
-    md5->buffer[59] = (md5->bitsProcessed >> 24) & 0xFF;
-    md5->buffer[60] = (md5->bitsProcessed >> 32) & 0xFF;
-    md5->buffer[61] = (md5->bitsProcessed >> 40) & 0xFF;
-    md5->buffer[62] = (md5->bitsProcessed >> 48) & 0xFF;
-    md5->buffer[63] = (md5->bitsProcessed >> 56) & 0xFF;
+    md5->lo <<= 3;
+    md5->buffer[56] =  md5->lo & 0xFF;
+    md5->buffer[57] = (md5->lo >>  8) & 0xFF;
+    md5->buffer[58] = (md5->lo >> 16) & 0xFF;
+    md5->buffer[59] = (md5->lo >> 24) & 0xFF;
+    md5->buffer[60] =  md5->hi & 0xFF;
+    md5->buffer[61] = (md5->hi >>  8) & 0xFF;
+    md5->buffer[62] = (md5->hi >> 16) & 0xFF;
+    md5->buffer[63] = (md5->hi >> 24) & 0xFF;
 
     // Transform for the final time.
-    transform(md5, md5->buffer);
+    transform(md5, md5->buffer, 64);
 
-    md5->hash[ 0] =  md5->state[0] & 0xFF;
-    md5->hash[ 1] = (md5->state[0] >>  8) & 0xFF;
-    md5->hash[ 2] = (md5->state[0] >> 16) & 0xFF;
-    md5->hash[ 3] = (md5->state[0] >> 24) & 0xFF;
-    md5->hash[ 4] =  md5->state[1] & 0xFF;
-    md5->hash[ 5] = (md5->state[1] >>  8) & 0xFF;
-    md5->hash[ 6] = (md5->state[1] >> 16) & 0xFF;
-    md5->hash[ 7] = (md5->state[1] >> 24) & 0xFF;
-    md5->hash[ 8] =  md5->state[2] & 0xFF;
-    md5->hash[ 9] = (md5->state[2] >>  8) & 0xFF;
-    md5->hash[10] = (md5->state[2] >> 16) & 0xFF;
-    md5->hash[11] = (md5->state[2] >> 24) & 0xFF;
-    md5->hash[12] =  md5->state[3] & 0xFF;
-    md5->hash[13] = (md5->state[3] >>  8) & 0xFF;
-    md5->hash[14] = (md5->state[3] >> 16) & 0xFF;
-    md5->hash[15] = (md5->state[3] >> 24) & 0xFF;
+    result[0]  =  md5->state[0] & 0xFF;
+    result[1]  = (md5->state[0] >>  8) & 0xFF;
+    result[2]  = (md5->state[0] >> 16) & 0xFF;
+    result[3]  = (md5->state[0] >> 24) & 0xFF;
+    result[4]  =  md5->state[1] & 0xFF;
+    result[5]  = (md5->state[1] >>  8) & 0xFF;
+    result[6]  = (md5->state[1] >> 16) & 0xFF;
+    result[7]  = (md5->state[1] >> 24) & 0xFF;
+    result[8]  =  md5->state[2] & 0xFF;
+    result[ 9] = (md5->state[2] >>  8) & 0xFF;
+    result[10] = (md5->state[2] >> 16) & 0xFF;
+    result[11] = (md5->state[2] >> 24) & 0xFF;
+    result[12] =  md5->state[3] & 0xFF;
+    result[13] = (md5->state[3] >>  8) & 0xFF;
+    result[14] = (md5->state[3] >> 16) & 0xFF;
+    result[15] = (md5->state[3] >> 24) & 0xFF;
+
+    memset(md5, 0, sizeof(*md5));
 }
 
 /**
@@ -200,8 +245,8 @@ void MD5_final(MD5_Context* md5) {
  * @param md5 The structure that will be initialized.
  */
 void MD5_init(MD5_Context* md5) {
-    md5->bufferLength = 0;
-    md5->bitsProcessed = 0;
+    md5->hi = 0;
+    md5->lo = 0;
 
     md5->state[0] = 0x67452301;
     md5->state[1] = 0xEFCDAB89;
@@ -222,81 +267,36 @@ void MD5_init(MD5_Context* md5) {
  * is divisible by 64. Doing this will ensure the most efficient copying of data
  * for processing.
  */
-void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length) {
-    uint16_t remaining;
+void MD5_update(MD5_Context* md5, const void* data, uint32_t length) {
+    uint32_t saved_lo;
+    uint32_t used;
+    uint32_t available;
 
-    // Take care of the easy situation first.
-    if (length == 0) {
-        return;
+    saved_lo = md5->lo;
+    if ((md5->lo = (saved_lo + length) & 0x1FFFFFFF) < saved_lo) {
+        ++md5->hi;
     }
 
-    // If they gave us data that's divisible by 64 this turned out to be
-    // much easier.
-    if (md5->bufferLength == 0 && length % 64 == 0) {
-        md5->bufferLength = 64;
+    md5->hi += length >> 29;
+    used = saved_lo & 0x3F;
 
-        while (length > 0) {
-            memcpy(md5->buffer, data, 64);
-            data += 64;
-            length -= 64;
-
-            transform(md5, md5->buffer);
-            md5->bitsProcessed += 512;
+    if (used) {
+        available = 64 - used;
+        if (length < available) {
+            memcpy(&md5->buffer[used], data, length);
+            return;
         }
 
-        md5->bufferLength = 0;
-        return;
+        memcpy(&md5->buffer[used], data, available);
+        data = (const unsigned char*)data + available;
+        length -= available;
+        transform(md5, md5->buffer, 64);
     }
 
-    // If the number of bytes to be processed is less than or equal to the
-    // remaining space in the buffer, copy it over.
-    remaining = 64 - md5->bufferLength;
-    if (length <= remaining) {
-        memcpy(md5->buffer + md5->bufferLength, data, length);
-        md5->bufferLength += length;
-
-        // If the data managed to fill us up entirely, process the chunk.
-        if (md5->bufferLength == 64) {
-            transform(md5, md5->buffer);
-            md5->bitsProcessed += 512;
-            md5->bufferLength = 0;
-        }
-
-        return;
+    if (length >= 64) {
+        data = transform(md5, data, length & ~(uint32_t)0x3F);
+        length &= 0x3F;
     }
 
-    // At this point, the data they're giving us is larger than the remaining
-    // space in the buffer, so we'll go ahead and copy part of it and process
-    // it directly. Remember to reset datalen and update bitlen.
-    memcpy(md5->buffer + md5->bufferLength, data, remaining);
-    transform(md5, md5->buffer);
-    data += remaining;
-    length -= remaining;
-    md5->bufferLength = 0;
-    md5->bitsProcessed += 512;
-
-    // Now, copy the available data over in 64-byte chunks until we have one
-    // chunk remaining that's less than 64 bytes.
-    while (length > 64) {
-        memcpy(md5->buffer, data, 64);
-        data += 64;
-        length -= 64;
-
-        transform(md5, md5->buffer);
-        md5->bitsProcessed += 512;
-    }
-
-    // At this point, length should be less than or equal to 64. So copy it over
-    // just like we've been doing. Also at this point, since we've been
-    // processing 64-byte chunks, datalen is zero, so we copy back at the
-    // beginning of the data array.
     memcpy(md5->buffer, data, length);
-    md5->bufferLength = length;
-
-    // If they managed to give us a perfect 64 byte chunk, process it.
-    if (md5->bufferLength == 64) {
-        transform(md5, md5->buffer);
-        md5->bitsProcessed += 512;
-        md5->bufferLength = 0;
-    }
 }

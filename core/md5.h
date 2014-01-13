@@ -19,37 +19,44 @@
 #ifndef __JMMHASHER_MD5_H_
 #define __JMMHASHER_MD5_H_
 
+/* This MD5 implementation has been adapted from the public domain reference at
+ * http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
+ */
+
 #include <stdint.h>
 
 /**
- * Structure containing the intermediate state information and final result for
- * calculating the MD5 hash of data.
- * @field buffer        Holds the current data buffer of data to process in the
- *                      transform function.
- * @field bufferLength  Count of the current amount of data in the buffer
- *                      awaiting transforming.
- * @field bitsProcessed Count of the total number of bits processed by the
- *                      transform function.
- * @field state         Holds the intermediate state of the MD5 function in
- *                      between transforms.
- * @field hash          Holds the final resulting hash of the MD5 function
- *                      converted for little endian use.
+ * Structure containing the intermediate state information for calculating the
+ * MD5 hash of data.
+ * @field hi     Holds the high 32-bits of the total bits of data processed.
+ * @field lo     Holds the low 32-bits of the total bits of data processed.
+ * @field state  Holds the transformation state between transformation calls.
+ * @field buffer Holds the data to be transformed when processing data at odd
+ *               offsets.
+ * @field block  Only defined for little-endian architectures that don't
+ *               tolerate unaligned memory accesses. Used by the GET/SET macros.
  */
 typedef struct {
-    unsigned char buffer[64];
-    uint16_t bufferLength;
-    uint64_t bitsProcessed;
+    uint32_t hi;
+    uint32_t lo;
     uint32_t state[4];
-    unsigned char hash[16];
+    unsigned char buffer[64];
+    #if !defined(__i386) && !defined(__x86_64__) && !defined(__vax__)
+    uint32_t block[16];
+    #endif
 } MD5_Context;
 
 /**
- * Performs the final operation on the MD5_Context structure and copies the
- * resulting hash to the hash buffer. The result in the hash is converted for
- * use in Little Endian CPU architectures.
- * @param md5 The MD5_Context structure to finalize.
+ * Performs the final operation on the MD5_Context structure, copies the
+ * resulting hash to the array pointed to by result and clears the structure. If
+ * the structure is to be reused, it needs to be initialized again.
+ * @param md5    The MD5_Context structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
+ * @remarks The result provided is converted for use in Little Endian CPU
+ *          architectures.
  */
-void MD5_final(MD5_Context* md5);
+void MD5_final(MD5_Context* md5, unsigned char* result);
 
 /**
  * Initializes a new MD5_Context structure for use with MD5_update.
@@ -70,6 +77,6 @@ void MD5_init(MD5_Context* md5);
  * is divisible by 64. Doing this will ensure the most efficient copying of data
  * for processing.
  */
-void MD5_update(MD5_Context* md5, unsigned char* data, uint32_t length);
+void MD5_update(MD5_Context* md5, const void* data, uint32_t length);
 
 #endif
