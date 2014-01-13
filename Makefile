@@ -1,4 +1,4 @@
-core = obj/crc32.o obj/md5.o obj/md4.o
+core = obj/crc32.o obj/md5.o obj/md4.o obj/sha1.o
 
 none :
 
@@ -24,3 +24,7 @@ obj/md4.o : core/md4.c core/md4.h
 
 obj/md5.o : core/md5.c core/md5.h
 	clang -c -Wall -fPIC core/md5.c -o obj/md5.o
+
+obj/sha1.o : core/sha1.c core/sha1.h
+	clang -c -Wall -fPIC core/sha1.c -o obj/sha1.o
+
