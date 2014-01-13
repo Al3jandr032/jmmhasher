@@ -19,16 +19,14 @@
 #ifndef __JMMHASHER_CRC32_H_
 #define __JMMHASHER_CRC32_H_
 
+#include <stdint.h>
+
 /**
- * Structure containing the intermediate digest and final result for
- * calculating the CRC32 of data.
+ * Structure containing the intermediate digest of the CRC32 of data.
  * @field digest Holds the intermediate digest as the CRC32 is computed.
- * @field hash   Holds the final result of the CRC32 digest converted for
- *               Little Endian architectures.
  */
 typedef struct {
-    unsigned int digest;
-    unsigned char hash[4];
+    uint32_t digest;
 } CRC32_Context;
 
 /**
@@ -36,8 +34,10 @@ typedef struct {
  * result to the hash char buffer. The result stored in hash is converted for
  * Little Endian architectures.
  * @param crc The CRC32 structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
  */
-void CRC32_final(CRC32_Context* crc);
+void CRC32_final(CRC32_Context* crc, unsigned char* result);
 
 /**
  * Initializes a new CRC32_Context structure for use with CRC32_update.
@@ -52,6 +52,6 @@ void CRC32_init(CRC32_Context* crc);
  * @param data   The data used to update the CRC digest.
  * @param length The length of the data to digest.
  */
-void CRC32_update(CRC32_Context* crc, unsigned char* buf, int length);
+void CRC32_update(CRC32_Context* crc, const void* buf, uint32_t length);
 
 #endif
