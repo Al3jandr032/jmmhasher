@@ -21,7 +21,7 @@
 /**
  * Precomputed CRC32 hash table.
  */
-unsigned int table[256] = {
+uint32_t table[256] = {
      0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L, 0x706af48fL, 0xe963a535L, 0x9e6495a3L,
      0x0edb8832L, 0x79dcb8a4L, 0xe0d5e91eL, 0x97d2d988L, 0x09b64c2bL, 0x7eb17cbdL, 0xe7b82d07L, 0x90bf1d91L,
      0x1db71064L, 0x6ab020f2L, 0xf3b97148L, 0x84be41deL, 0x1adad47dL, 0x6ddde4ebL, 0xf4d4b551L, 0x83d385c7L,
@@ -58,17 +58,19 @@ unsigned int table[256] = {
 
 /**
  * Performs the final operation on the CRC32_Context structure and copies the
- * result to the hash char buffer. The result stored in hash is converted for
+ * result to the result array. The result stored in hash is converted for
  * Little Endian architectures.
  * @param crc The CRC32 structure to finalize.
+ * @param result Pointer to an array of at least 16 bytes used to hold the
+ *               resulting hash.
  */
-void CRC32_final(CRC32_Context* crc) {
+void CRC32_final(CRC32_Context* crc, unsigned char* result) {
     crc->digest = crc->digest ^ 0xFFFFFFFFL;
 
-    crc->hash[0] = (crc->digest >> 24) & 0xFF;
-    crc->hash[1] = (crc->digest >> 16) & 0xFF;
-    crc->hash[2] = (crc->digest >>  8) & 0xFF;
-    crc->hash[3] = crc->digest & 0xFF;
+    result[0] = (crc->digest >> 24) & 0xFF;
+    result[1] = (crc->digest >> 16) & 0xFF;
+    result[2] = (crc->digest >>  8) & 0xFF;
+    result[3] = crc->digest & 0xFF;
 }
 
 /**
@@ -77,10 +79,6 @@ void CRC32_final(CRC32_Context* crc) {
  */
 void CRC32_init(CRC32_Context* crc) {
     crc->digest = 0xFFFFFFFFL;
-    crc->hash[0] = 0x00;
-    crc->hash[1] = 0x00;
-    crc->hash[2] = 0x00;
-    crc->hash[3] = 0x00;
 }
 
 /**
@@ -90,12 +88,16 @@ void CRC32_init(CRC32_Context* crc) {
  * @param data   The data used to update the CRC digest.
  * @param length The length of the data to digest.
  */
-void CRC32_update(CRC32_Context* crc, unsigned char* data, int length) {
-    unsigned int digest = crc->digest;
-    int idx;
+void CRC32_update(CRC32_Context* crc, const void* data, uint32_t length) {
+    uint32_t digest;
+    uint32_t idx;
+    unsigned char* ptr;
+
+    ptr = (unsigned char*)data;
+    digest = crc->digest;
 
     for (idx = 0; idx < length; ++idx) {
-        digest = table[(digest ^ data[idx]) & 0xFF] ^ (digest >> 8);
+        digest = table[(digest ^ ptr[idx]) & 0xFF] ^ (digest >> 8);
     }
 
     crc->digest = digest;
