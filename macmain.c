@@ -192,48 +192,23 @@ void hash_file_sha1(char* filename) {
         return;
     }
 
-    SHA1Context sha1;
-    SHA1Reset(&sha1);
+    SHA1_Context sha1;
+    SHA1_init(&sha1);
 
     int bytesRead;
     unsigned char data[1024];
     while ((bytesRead = read(file, data, 1024)) != 0) {
-        SHA1Input(&sha1, data, bytesRead);
+        SHA1_update(&sha1, data, bytesRead);
     }
 
     unsigned char result[20];
-    SHA1Result(&sha1);
+    SHA1_final(&sha1, result);
 
     close(file);
-
-    result[0]  = (sha1.Message_Digest[0] >> 24) & 0xFF;
-    result[1]  = (sha1.Message_Digest[0] >> 16) & 0xFF;
-    result[2]  = (sha1.Message_Digest[0] >>  8) & 0xFF;
-    result[3]  =  sha1.Message_Digest[0] & 0xFF;
-    result[4]  = (sha1.Message_Digest[1] >> 24) & 0xFF;
-    result[5]  = (sha1.Message_Digest[1] >> 16) & 0xFF;
-    result[6]  = (sha1.Message_Digest[1] >>  8) & 0xFF;
-    result[7]  =  sha1.Message_Digest[1] & 0xFF;
-    result[8]  = (sha1.Message_Digest[2] >> 24) & 0xFF;
-    result[9]  = (sha1.Message_Digest[2] >> 16) & 0xFF;
-    result[10] = (sha1.Message_Digest[2] >>  8) & 0xFF;
-    result[11] =  sha1.Message_Digest[2] & 0xFF;
-    result[12] = (sha1.Message_Digest[3] >> 24) & 0xFF;
-    result[13] = (sha1.Message_Digest[3] >> 16) & 0xFF;
-    result[14] = (sha1.Message_Digest[3] >>  8) & 0xFF;
-    result[15] =  sha1.Message_Digest[3] & 0xFF;
-    result[16] = (sha1.Message_Digest[4] >> 24) & 0xFF;
-    result[17] = (sha1.Message_Digest[4] >> 16) & 0xFF;
-    result[18] = (sha1.Message_Digest[4] >>  8) & 0xFF;
-    result[19] =  sha1.Message_Digest[4] & 0xFF;
 
     printf("  ");
     for (int i = 0; i < 20; ++i) {
         printf("%02x", result[i]);
-    }
-    printf(" | ");
-    for(int i = 0; i < 5 ; i++) {
-        printf("%X ", sha1.Message_Digest[i]);
     }
 
     printf(" %s\n", filename);
