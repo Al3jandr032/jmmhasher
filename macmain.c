@@ -1,6 +1,7 @@
 #include "core/crc32.h"
 #include "core/md5.h"
 #include "core/md4.h"
+#include "core/sha1.h"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -181,6 +182,39 @@ void hash_file_md5(char* filename) {
 }
 
 /**
+ * Computes the SHA1 on the contents of the provided file.
+ * @param filename The name of the file to process.
+ */
+void hash_file_sha1(char* filename) {
+    int file = open(filename, O_RDONLY | O_SHLOCK);
+    if (file == -1) {
+        fprintf(stderr, "Unable to open file %s: %s\n", filename, strerror(errno));
+        return;
+    }
+
+    SHA1_Context sha1;
+    SHA1_init(&sha1);
+
+    int bytesRead;
+    unsigned char data[1024];
+    while ((bytesRead = read(file, data, 1024)) != 0) {
+        SHA1_update(&sha1, data, bytesRead);
+    }
+
+    unsigned char result[20];
+    SHA1_final(&sha1, result);
+
+    close(file);
+
+    printf("  ");
+    for (int i = 0; i < 20; ++i) {
+        printf("%02x", result[i]);
+    }
+
+    printf(" %s\n", filename);
+}
+
+/**
  * Main entry point for the mac test program.
  * @param  argc The number of arguments the program was called with.
  * @param  argv The arguments the program was called with.
@@ -194,10 +228,11 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 1; i < argc; ++i) {
-        hash_file_crc32(argv[i]);
-        //hash_file_md5(argv[i]);
-        //hash_file_md4(argv[i]);
+        //hash_file_crc32(argv[i]);
         //hash_file_ed2k(argv[i]);
+        //hash_file_md4(argv[i]);
+        //hash_file_md5(argv[i]);
+        hash_file_sha1(argv[1]);
     }
 
     return 0;
