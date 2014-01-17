@@ -1,0 +1,47 @@
+CC=clang
+INCPATH=./src
+CFLAGS=-g -O0 -Wall -fPIC -I${INCPATH}
+RM=rm -rf
+MKDIR=mkdir -p
+OBJDIR=./obj
+BINDIR=./bin
+SRC=./src
+OBJS=${OBJDIR}/crc32.o ${OBJDIR}/md4.o ${OBJDIR}/md5.o ${OBJDIR}/sha1.o
+
+ifeq (${MAKECMDGOALS}, macrelease)
+	CFLAGS=-O4 -Wall -I${INCPATH}
+endif
+
+none: ;
+
+.PHONY: none all clean dist-clean
+
+${shell [ -d ${BINDIR} ] || mkdir -p ${BINDIR}}
+${shell [ -d ${OBJDIR} ] || mkdir -p ${OBJDIR}}
+
+${OBJDIR}/crc32.o: ${SRC}/core/crc32.h ${SRC}/core/crc32.c
+${OBJDIR}/md4.o: ${SRC}/core/md4.h ${SRC}/core/md4.c
+${OBJDIR}/md5.o: ${SRC}/core/md5.h ${SRC}/core/md5.c
+${OBJDIR}/sha1.o: ${SRC}/core/sha1.h ${SRC}/core/sha1.c
+${OBJDIR}/test.o: ${SRC}/mac/test.c
+
+obj/%.o:
+	${CC} ${CFLAGS} -c ${subst .h,.c,$<} -o ${OBJDIR}/$*.o
+
+mactest: ${BINDIR}/mactest
+macrelease:	${BINDIR}/macrelease
+
+${BINDIR}/mactest ${BINDIR}/macrelease: ${OBJS} ${OBJDIR}/test.o
+	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/test.o -o ${BINDIR}/${@F}
+
+clean: clean-obj clean-bin
+
+clean-obj:
+	-@${RM} ${OBJDIR}/*
+
+clean-bin:
+	-@${RM} ${BINDIR}/*
+
+dist-clean: clean
+	-@${RM} ${OBJDIR}
+	-@${RM} ${BINDIR}
