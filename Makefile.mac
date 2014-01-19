@@ -24,15 +24,20 @@ ${OBJDIR}/md4.o: ${SRC}/core/md4.h ${SRC}/core/md4.c
 ${OBJDIR}/md5.o: ${SRC}/core/md5.h ${SRC}/core/md5.c
 ${OBJDIR}/sha1.o: ${SRC}/core/sha1.h ${SRC}/core/sha1.c
 ${OBJDIR}/test.o: ${SRC}/mac/test.c
+${OBJDIR}/hasher.o: ${SRC}/mac/hasher.c
 
 obj/%.o:
 	${CC} ${CFLAGS} -c ${subst .h,.c,$<} -o ${OBJDIR}/$*.o
 
 mactest: ${BINDIR}/mactest
 macrelease:	${BINDIR}/macrelease
+hasher: ${BINDIR}/jmmhasher
 
 ${BINDIR}/mactest ${BINDIR}/macrelease: ${OBJS} ${OBJDIR}/test.o
 	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/test.o -o ${BINDIR}/${@F}
+
+${BINDIR}/jmmhasher: ${OBJS} ${OBJDIR}/hasher.o
+	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/hasher.o -o ${BINDIR}/${@F}
 
 clean: clean-obj clean-bin
 
