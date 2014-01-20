@@ -37,7 +37,7 @@ mactest: ${BINDIR}/mactest
 macrelease:	${BINDIR}/macrelease
 hasher: ${BINDIR}/jmmhasher
 libhasher: ${BINDIR}/libhasher.dylib
-libhashertest: ${BINDIR}/libhashertest
+libhashertest: ${BINDIR}/libhashertest ${BINDIR}/libhashertest.py
 
 ${BINDIR}/mactest ${BINDIR}/macrelease: ${OBJS} ${OBJDIR}/test.o
 	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/test.o -o ${BINDIR}/${@F}
@@ -55,6 +55,10 @@ ${BINDIR}/libhasher.dylib: ${OBJS} ${OBJDIR}/libhasher.o
 ${BINDIR}/libhashertest: ${BINDIR}/libhasher.dylib ${OBJDIR}/libhashertest.o
 	${CC} ${CFLAGS} -L${BINDIR} -lhasher ${OBJDIR}/libhashertest.o \
 	 -Wl,-rpath,@executable_path/. -o ${BINDIR}/${@F}
+
+${BINDIR}/libhashertest.py: ${SRC}/mac/libhashertest.py
+	cp ${SRC}/mac/libhashertest.py ${BINDIR}/libhashertest.py
+	chmod +x ${BINDIR}/libhashertest.py
 
 clean: clean-obj clean-bin
 
