@@ -346,6 +346,7 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             if (DO_CRC32) { CRC32_update(&crc32, fileData, bytesRead); }
             if (DO_MD4) { MD4_update(&md4, fileData, bytesRead); }
             if (DO_MD5) { MD5_update(&md5, fileData, bytesRead); }
+            if (DO_SHA1) { SHA1_update(&sha1, fileData, bytesRead); }
             if (DO_ED2K) {
                 if (ed2kLoopIdx == 10) {
                     MD4_final(&ed2k, &ed2kHashes[ed2kBlockIdx * 16]);
