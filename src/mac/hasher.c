@@ -368,7 +368,6 @@ static void process_files(uint8_t options, char** files, uint32_t fileCount) {
                     ed2kHashes = NULL;
                 }
 
-                close(file);
                 break;
             }
 
@@ -396,6 +395,10 @@ static void process_files(uint8_t options, char** files, uint32_t fileCount) {
                 MD4_update(&ed2k, fileData, bytesRead);
             }
         }
+
+        /* Close our file descriptor since we're done reading (whether or not
+         * the read finished in error.) */
+        close(file);
 
         /* Release our file buffer. */
         free(fileData);
