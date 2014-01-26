@@ -98,7 +98,10 @@ int wmain(int argc, wchar_t** argv) {
         return -1;
     }
 
-    files = (wchar_t**)malloc(sizeof(wchar_t*) * argc);
+    files = (wchar_t**)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        sizeof(wchar_t*) * argc);
     if (!files) {
         fwprintf(stderr, L"  ERROR: Unable to allocate file array.\n");
         return -1;
@@ -194,7 +197,7 @@ int wmain(int argc, wchar_t** argv) {
 
     process_files(options, files, fileCount);
 
-    free(files);
+    HeapFree(GetProcessHeap(), 0, files);
     wprintf(L"\n");
     return 0;
 }
@@ -315,7 +318,10 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
 
             if (ed2kBlocks > 1) {
                 ed2kHashLength = ed2kBlocks * 16;
-                ed2kHashes = (unsigned char*)malloc(ed2kHashLength);
+                ed2kHashes = (unsigned char*)HeapAlloc(
+                    GetProcessHeap(),
+                    HEAP_ZERO_MEMORY,
+                    ed2kHashLength);
                 if (ed2kHashes == NULL && errno == ENOMEM) {
                     wprintf(L"unable to allocate buffer.\n");
                     CloseHandle(file);
@@ -324,11 +330,14 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             }
         }
 
-        fileData = (unsigned char*)malloc(BUFFERSIZE);
+        fileData = (unsigned char*)HeapAlloc(
+            GetProcessHeap(),
+            HEAP_ZERO_MEMORY,
+            BUFFERSIZE);
         if (fileData == NULL && errno == ENOMEM) {
             wprintf(L"unable to allocate buffer.\n");
             CloseHandle(file);
-            free(ed2kHashes);
+            HeapFree(GetProcessHeap(), 0, ed2kHashes);
             ed2kHashes = NULL;
             continue;
         }
@@ -363,11 +372,11 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             }
         } while (bytesRead != 0);
 
-        free(fileData);
+        HeapFree(GetProcessHeap(), 0, fileData);
         CloseHandle(file);
 
         if (readFailed) {
-            free(ed2kHashes);
+            HeapFree(GetProcessHeap(), 0, ed2kHashes);
             continue;
         }
 
@@ -394,7 +403,7 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
                 MD4_final(&ed2k, &result[56]);
 
                 /* Free the ED2k hash result buffer. */
-                free(ed2kHashes);
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
                 ed2kHashes = NULL;
             }
         }
