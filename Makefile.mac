@@ -1,6 +1,8 @@
 CC=clang
 INCPATH=./src
-CFLAGS=-g -O0 -Wall -fPIC -I${INCPATH}
+OPTFLAGS=-O4
+MODE=release
+CFLAGS=${OPTFLAGS} -Wall -fPIC -I${INCPATH} -std=c99 -fvisibility=hidden
 RM=rm -rf
 MKDIR=mkdir -p
 OBJDIR=./obj
@@ -8,8 +10,8 @@ BINDIR=./bin
 SRC=./src
 OBJS=${OBJDIR}/crc32.o ${OBJDIR}/md4.o ${OBJDIR}/md5.o ${OBJDIR}/sha1.o
 
-ifeq (${MAKECMDGOALS}, macrelease)
-	CFLAGS=-O4 -Wall -I${INCPATH}
+ifeq (${MODE}, debug)
+	OPTFLAGS=-g -O0
 endif
 
 none: ;
@@ -24,15 +26,39 @@ ${OBJDIR}/md4.o: ${SRC}/core/md4.h ${SRC}/core/md4.c
 ${OBJDIR}/md5.o: ${SRC}/core/md5.h ${SRC}/core/md5.c
 ${OBJDIR}/sha1.o: ${SRC}/core/sha1.h ${SRC}/core/sha1.c
 ${OBJDIR}/test.o: ${SRC}/mac/test.c
+${OBJDIR}/hasher.o: ${SRC}/mac/hasher.c
+${OBJDIR}/libhasher.o: ${SRC}/mac/libhasher.c ${SRC}/mac/libhasher.h
+${OBJDIR}/libhashertest.o: ${SRC}/mac/libhashertest.c
 
 obj/%.o:
 	${CC} ${CFLAGS} -c ${subst .h,.c,$<} -o ${OBJDIR}/$*.o
 
 mactest: ${BINDIR}/mactest
 macrelease:	${BINDIR}/macrelease
+hasher: ${BINDIR}/jmmhasher
+libhasher: ${BINDIR}/libhasher.dylib
+libhashertest: ${BINDIR}/libhashertest ${BINDIR}/libhashertest.py
 
 ${BINDIR}/mactest ${BINDIR}/macrelease: ${OBJS} ${OBJDIR}/test.o
 	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/test.o -o ${BINDIR}/${@F}
+
+${BINDIR}/jmmhasher: ${OBJS} ${OBJDIR}/hasher.o
+	${CC} ${CFLAGS} ${OBJS} ${OBJDIR}/hasher.o -o ${BINDIR}/${@F}
+
+${BINDIR}/libhasher.dylib: ${OBJS} ${OBJDIR}/libhasher.o
+	${CC} ${CFLAGS} -dynamiclib -install_name @rpath/libhasher.1.dylib \
+	 -compatibility_version 1.0.0 -current_version 1.0.0 ${OBJS} \
+	 ${OBJDIR}/libhasher.o -o ${BINDIR}/libhasher.1.0.dylib
+	-ln -sv libhasher.1.dylib ${BINDIR}/libhasher.dylib
+	-ln -sv libhasher.1.0.dylib ${BINDIR}/libhasher.1.dylib
+
+${BINDIR}/libhashertest: ${BINDIR}/libhasher.dylib ${OBJDIR}/libhashertest.o
+	${CC} ${CFLAGS} -L${BINDIR} -lhasher ${OBJDIR}/libhashertest.o \
+	 -Wl,-rpath,@executable_path/. -o ${BINDIR}/${@F}
+
+${BINDIR}/libhashertest.py: ${SRC}/mac/libhashertest.py
+	cp ${SRC}/mac/libhashertest.py ${BINDIR}/libhashertest.py
+	chmod +x ${BINDIR}/libhashertest.py
 
 clean: clean-obj clean-bin
 
