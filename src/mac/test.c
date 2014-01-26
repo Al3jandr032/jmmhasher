@@ -221,7 +221,7 @@ void hash_file_sha1(char* filename) {
  * @return      Returns a negative value on failure or zero on success.
  */
 int main(int argc, char** argv) {
-    printf("jmmhasher, mactest. Version: 0.1.0\n");
+    printf("jmmhasher, mactest. Version: 0.2.1\n");
     if (argc < 2) {
         fprintf(stderr, "NO INPUT FILE\n");
         return -1;

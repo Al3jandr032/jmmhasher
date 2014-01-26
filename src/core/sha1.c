@@ -50,7 +50,11 @@ static void transform(SHA1_Context* sha1, const void* data) {
     uint32_t c;
     uint32_t d;
     uint32_t e;
-    uint32_t *block = (uint32_t*)data;
+    uint32_t block[16] = { 0 };
+
+    /* Copy the block of data we're going to work on. It might be a small
+     * performance hit (untested) but we modify the data during the rounds. */
+    memcpy(&block, data, 64);
 
     a = sha1->state[0];
     b = sha1->state[1];
