@@ -90,7 +90,7 @@ static void print_usage();
 int main(int argc, char** argv) {
     uint8_t options = OPTION_NONE;
 
-    printf("jmmhasher 0.2.0\n");
+    printf("jmmhasher 0.2.1\n");
     if (argc < 2) {
         fprintf(stderr, "  ERROR: Missing required arguments.\n");
         print_usage();
