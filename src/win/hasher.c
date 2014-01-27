@@ -260,24 +260,23 @@ static void print_usage() {
  *                  array, included any embedded NULL items.
  */
 static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) {
-    CRC32_Context crc32 = { 0 };
-    MD4_Context ed2k = { 0 };
-    MD4_Context md4 = { 0 };
-    MD5_Context md5 = { 0 };
-    SHA1_Context sha1 = { 0 };
-    DWORD bytesRead = 0;
-    uint32_t ed2kHashLength = 0;
-    uint32_t ed2kBlockIdx = 0;
-    uint32_t ed2kBlocks = 0;
-    uint8_t  ed2kLoopIdx = 0;
     uint32_t loopIdx = 0;
-    unsigned char result[72] = { 0 };
-    unsigned char* fileData = NULL;
-    unsigned char* ed2kHashes = NULL;
-    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-
 
     for (loopIdx = 0; loopIdx < fileCount; ++loopIdx) {
+        CRC32_Context crc32 = { 0 };
+        MD4_Context ed2k = { 0 };
+        MD4_Context md4 = { 0 };
+        MD5_Context md5 = { 0 };
+        SHA1_Context sha1 = { 0 };
+        DWORD bytesRead = 0;
+        uint32_t ed2kHashLength = 0;
+        uint32_t ed2kBlockIdx = 0;
+        uint32_t ed2kBlocks = 0;
+        uint8_t  ed2kLoopIdx = 0;
+        unsigned char result[72] = { 0 };
+        unsigned char* fileData = NULL;
+        unsigned char* ed2kHashes = NULL;
+        WIN32_FILE_ATTRIBUTE_DATA fileInfo;
         HANDLE file;
         BOOL readFailed = FALSE;
         errno = 0;
