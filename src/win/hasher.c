@@ -82,7 +82,7 @@ static void print_usage();
  *                  count provided here must be the entire length of the files
  *                  array, included any embedded NULL items.
  */
- static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount);
+static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount);
 
 int wmain(int argc, wchar_t** argv) {
     uint8_t options = OPTION_NONE;
@@ -98,7 +98,10 @@ int wmain(int argc, wchar_t** argv) {
         return -1;
     }
 
-    files = (wchar_t**)malloc(sizeof(wchar_t*) * argc);
+    files = (wchar_t**)HeapAlloc(
+        GetProcessHeap(),
+        HEAP_ZERO_MEMORY,
+        sizeof(wchar_t*) * argc);
     if (!files) {
         fwprintf(stderr, L"  ERROR: Unable to allocate file array.\n");
         return -1;
@@ -194,7 +197,7 @@ int wmain(int argc, wchar_t** argv) {
 
     process_files(options, files, fileCount);
 
-    free(files);
+    HeapFree(GetProcessHeap(), 0, files);
     wprintf(L"\n");
     return 0;
 }
@@ -257,24 +260,23 @@ static void print_usage() {
  *                  array, included any embedded NULL items.
  */
 static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) {
-    CRC32_Context crc32 = { 0 };
-    MD4_Context ed2k = { 0 };
-    MD4_Context md4 = { 0 };
-    MD5_Context md5 = { 0 };
-    SHA1_Context sha1 = { 0 };
-    DWORD bytesRead = 0;
-    uint32_t ed2kHashLength = 0;
-    uint32_t ed2kBlockIdx = 0;
-    uint32_t ed2kBlocks = 0;
-    uint8_t  ed2kLoopIdx = 0;
     uint32_t loopIdx = 0;
-    unsigned char result[72] = { 0 };
-    unsigned char* fileData = NULL;
-    unsigned char* ed2kHashes = NULL;
-    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-
 
     for (loopIdx = 0; loopIdx < fileCount; ++loopIdx) {
+        CRC32_Context crc32 = { 0 };
+        MD4_Context ed2k = { 0 };
+        MD4_Context md4 = { 0 };
+        MD5_Context md5 = { 0 };
+        SHA1_Context sha1 = { 0 };
+        DWORD bytesRead = 0;
+        uint32_t ed2kHashLength = 0;
+        uint32_t ed2kBlockIdx = 0;
+        uint32_t ed2kBlocks = 0;
+        uint8_t  ed2kLoopIdx = 0;
+        unsigned char result[72] = { 0 };
+        unsigned char* fileData = NULL;
+        unsigned char* ed2kHashes = NULL;
+        WIN32_FILE_ATTRIBUTE_DATA fileInfo;
         HANDLE file;
         BOOL readFailed = FALSE;
         errno = 0;
@@ -284,7 +286,15 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         }
 
         wprintf(L"  %s: ", files[loopIdx]);
-        file = CreateFileW(files[loopIdx], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+        file = CreateFileW(
+            files[loopIdx],
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_FLAG_SEQUENTIAL_SCAN,
+            NULL);
+
         if (file == INVALID_HANDLE_VALUE) {
             wprintf(L"unable to open file.\n");
             continue;
@@ -307,7 +317,8 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         if (DO_MD5) { MD5_init(&md5); }
         if (DO_SHA1) { SHA1_init(&sha1); }
         if (DO_ED2K) {
-            uint64_t fileSize = (((uint64_t)fileInfo.nFileSizeHigh) << 32) | fileInfo.nFileSizeLow;
+            uint64_t fileSize = (((uint64_t)fileInfo.nFileSizeHigh) << 32) |
+                fileInfo.nFileSizeLow;
             ed2kBlocks = (uint32_t)(fileSize / BLOCKSIZE);
             if (fileSize % BLOCKSIZE > 0) {
                 ++ed2kBlocks;
@@ -315,8 +326,11 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
 
             if (ed2kBlocks > 1) {
                 ed2kHashLength = ed2kBlocks * 16;
-                ed2kHashes = (unsigned char*)malloc(ed2kHashLength);
-                if (ed2kHashes == NULL && errno == ENOMEM) {
+                ed2kHashes = (unsigned char*)HeapAlloc(
+                    GetProcessHeap(),
+                    HEAP_ZERO_MEMORY,
+                    ed2kHashLength);
+                if (ed2kHashes == NULL) {
                     wprintf(L"unable to allocate buffer.\n");
                     CloseHandle(file);
                     continue;
@@ -324,11 +338,16 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             }
         }
 
-        fileData = (unsigned char*)malloc(BUFFERSIZE);
-        if (fileData == NULL && errno == ENOMEM) {
+        fileData = (unsigned char*)HeapAlloc(
+            GetProcessHeap(),
+            HEAP_ZERO_MEMORY,
+            BUFFERSIZE);
+        if (fileData == NULL) {
             wprintf(L"unable to allocate buffer.\n");
             CloseHandle(file);
-            free(ed2kHashes);
+            if (DO_ED2K) {
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            }
             ed2kHashes = NULL;
             continue;
         }
@@ -346,6 +365,7 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             if (DO_CRC32) { CRC32_update(&crc32, fileData, bytesRead); }
             if (DO_MD4) { MD4_update(&md4, fileData, bytesRead); }
             if (DO_MD5) { MD5_update(&md5, fileData, bytesRead); }
+            if (DO_SHA1) { SHA1_update(&sha1, fileData, bytesRead); }
             if (DO_ED2K) {
                 if (ed2kLoopIdx == 10) {
                     MD4_final(&ed2k, &ed2kHashes[ed2kBlockIdx * 16]);
@@ -362,11 +382,14 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             }
         } while (bytesRead != 0);
 
-        free(fileData);
+        HeapFree(GetProcessHeap(), 0, fileData);
         CloseHandle(file);
 
         if (readFailed) {
-            free(ed2kHashes);
+            if (DO_ED2K) {
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            }
+
             continue;
         }
 
@@ -393,7 +416,7 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
                 MD4_final(&ed2k, &result[56]);
 
                 /* Free the ED2k hash result buffer. */
-                free(ed2kHashes);
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
                 ed2kHashes = NULL;
             }
         }
@@ -407,7 +430,5 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         if (DO_ED2K) { print_hash(L" ED2K", &result[56], 16); }
 
         wprintf(L"\n");
-
-        wprintf(L" bytes: %d\n", bytesRead);
     }
 }
