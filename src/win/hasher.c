@@ -82,7 +82,7 @@ static void print_usage();
  *                  count provided here must be the entire length of the files
  *                  array, included any embedded NULL items.
  */
- static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount);
+static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount);
 
 int wmain(int argc, wchar_t** argv) {
     uint8_t options = OPTION_NONE;
@@ -286,7 +286,15 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         }
 
         wprintf(L"  %s: ", files[loopIdx]);
-        file = CreateFileW(files[loopIdx], GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+        file = CreateFileW(
+            files[loopIdx],
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_FLAG_SEQUENTIAL_SCAN,
+            NULL);
+
         if (file == INVALID_HANDLE_VALUE) {
             wprintf(L"unable to open file.\n");
             continue;
@@ -309,7 +317,8 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         if (DO_MD5) { MD5_init(&md5); }
         if (DO_SHA1) { SHA1_init(&sha1); }
         if (DO_ED2K) {
-            uint64_t fileSize = (((uint64_t)fileInfo.nFileSizeHigh) << 32) | fileInfo.nFileSizeLow;
+            uint64_t fileSize = (((uint64_t)fileInfo.nFileSizeHigh) << 32) |
+                fileInfo.nFileSizeLow;
             ed2kBlocks = (uint32_t)(fileSize / BLOCKSIZE);
             if (fileSize % BLOCKSIZE > 0) {
                 ++ed2kBlocks;
@@ -321,7 +330,7 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
                     GetProcessHeap(),
                     HEAP_ZERO_MEMORY,
                     ed2kHashLength);
-                if (ed2kHashes == NULL && errno == ENOMEM) {
+                if (ed2kHashes == NULL) {
                     wprintf(L"unable to allocate buffer.\n");
                     CloseHandle(file);
                     continue;
@@ -333,10 +342,12 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
             GetProcessHeap(),
             HEAP_ZERO_MEMORY,
             BUFFERSIZE);
-        if (fileData == NULL && errno == ENOMEM) {
+        if (fileData == NULL) {
             wprintf(L"unable to allocate buffer.\n");
             CloseHandle(file);
-            HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            if (DO_ED2K) {
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            }
             ed2kHashes = NULL;
             continue;
         }
@@ -375,7 +386,10 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         CloseHandle(file);
 
         if (readFailed) {
-            HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            if (DO_ED2K) {
+                HeapFree(GetProcessHeap(), 0, ed2kHashes);
+            }
+
             continue;
         }
 
@@ -416,7 +430,5 @@ static void process_files(uint8_t options, wchar_t** files, uint32_t fileCount) 
         if (DO_ED2K) { print_hash(L" ED2K", &result[56], 16); }
 
         wprintf(L"\n");
-
-        wprintf(L" bytes: %d\n", bytesRead);
     }
 }
