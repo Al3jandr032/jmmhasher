@@ -1,0 +1,51 @@
+CC=cl
+LD=link
+LDOPTS=/nologo /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /errorReport:none /TLBID:1
+INCPATH=src
+OBJDIR=obj\win
+BINDIR=bin\win
+OPTFLAGS=
+CFLAGS=/nologo /W3 /WX /Oy- /I $(INCPATH) /D "WIN32" /D "_WINDOWS" /D "_UNICODE" /D "UNICODE" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\\$(OBJDIR)\\" /Gd /TC /errorReport:none
+RM=del /s /q
+RMDIR=rmdir /s /q
+MKDIR=mkdir
+SRC=src
+OBJS=$(OBJDIR)\crc32.obj $(OBJDIR)\md4.obj $(OBJDIR)\md5.obj $(OBJDIR)\sha1.obj
+
+none:
+
+.PHONY: none
+
+$(BINDIR):
+	-@IF NOT EXIST $(BINDIR)\NUL $(MKDIR) $(BINDIR)
+
+$(OBJDIR):
+	-@IF NOT EXIST $(OBJDIR)\NUL $(MKDIR) $(OBJDIR)
+
+$(OBJDIR)\crc32.obj: $(OBJDIR) $(SRC)\core\crc32.c $(SRC)\core\crc32.h
+	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\core\crc32.c
+$(OBJDIR)\md4.obj: $(OBJDIR) $(SRC)\core\md4.c $(SRC)\core\md4.h
+	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\core\md4.c
+$(OBJDIR)\md5.obj: $(OBJDIR) $(SRC)\core\md5.c $(SRC)\core\md5.h
+	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\core\md5.c
+$(OBJDIR)\sha1.obj: $(OBJDIR) $(SRC)\core\sha1.c $(SRC)\core\sha1.h
+	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\core\sha1.c
+$(OBJDIR)\hasher.obj: $(OBJDIR) $(SRC)\win\hasher.c
+	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\win\hasher.c
+
+hasher: $(BINDIR)\jmmhasher.exe
+
+$(BINDIR)\jmmhasher.exe: $(OBJS) $(OBJDIR)\hasher.obj $(BINDIR)
+	$(LD) $(LDOPTS) /SUBSYSTEM:CONSOLE $(OBJS) $(OBJDIR)\hasher.obj /OUT:$(BINDIR)\jmmhasher.exe
+
+clean: clean-obj clean-bin
+
+clean-obj:
+	-@$(RM) $(OBJDIR)\* > nul 2>&1
+
+clean-bin:
+	-@$(RM) $(BINDIR)\* > nul 2>&1
+
+dist-clean: clean
+	-@$(RMDIR) $(OBJDIR) > nul 2>&1
+	-@$(RMDIR) $(BINDIR) > nul 2>&1
