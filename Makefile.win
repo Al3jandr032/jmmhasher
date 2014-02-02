@@ -1,6 +1,7 @@
 CC=cl
 LD=link
-LDOPTS=/nologo /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /errorReport:none /TLBID:1
+RC=rc
+LDOPTS=/nologo /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /MANIFEST:embed /errorReport:none /TLBID:1
 INCPATH=src
 OBJDIR=obj\win
 BINDIR=bin\win
@@ -32,11 +33,19 @@ $(OBJDIR)\sha1.obj: $(OBJDIR) $(SRC)\core\sha1.c $(SRC)\core\sha1.h
 	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\core\sha1.c
 $(OBJDIR)\hasher.obj: $(OBJDIR) $(SRC)\win\hasher.c
 	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\win\hasher.c
+$(OBJDIR)\libhasher.obj: $(OBJDIR) $(SRC)\win\libhasher.c $(SRC)\win\libhasher.h
+	$(CC) /c /D HASHERDLL $(OPTFLAGS) $(CFLAGS) $(SRC)\win\libhasher.c
+$(OBJDIR)\libhasher.res: $(OBJDIR) $(SRC)\win\libhasher.rc
+	$(RC) /Fo"$(OBJDIR)\libhasher.res" /r /D UNICODE /D _UNICODE /NOLOGO $(SRC)\win\libhasher.rc
 
 hasher: $(BINDIR)\jmmhasher.exe
+libhasher: $(BINDIR)\hasher.dll
 
 $(BINDIR)\jmmhasher.exe: $(OBJS) $(OBJDIR)\hasher.obj $(BINDIR)
 	$(LD) $(LDOPTS) /SUBSYSTEM:CONSOLE $(OBJS) $(OBJDIR)\hasher.obj /OUT:$(BINDIR)\jmmhasher.exe
+
+$(BINDIR)\hasher.dll: $(OBJS) $(OBJDIR)\libhasher.obj $(OBJDIR)\libhasher.res $(BINDIR)
+	$(LD) $(LDOPTS) /SUBSYSTEM:WINDOWS /DLL $(OBJS) $(OBJDIR)\libhasher.obj  $(OBJDIR)\libhasher.res /OUT:$(BINDIR)\hasher.dll
 
 clean: clean-obj clean-bin
 
