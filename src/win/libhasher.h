@@ -22,6 +22,9 @@
 #include <stdint.h>
 #include <wchar.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #if defined(HASHERDLL)
 #define EXPORT __declspec(dllexport)
@@ -85,7 +88,7 @@ typedef int32_t HashProgressCallback(int32_t tag, uint64_t progress);
 
 /**
  * Accepts a HashRequest structure and attempts to calculate the requested hash
- * of the provided file using synchronous IO.
+ * of the provided file using asynchronous IO.
  * @param  request  The HashRequest containing the options and the file that
  *                  should be hashed. See the description of the structure for
  *                  more information on how to set it up.
@@ -111,8 +114,27 @@ typedef int32_t HashProgressCallback(int32_t tag, uint64_t progress);
  *                    -9: A cancellation request was returned by the callback
  *                        function provided in the callback parameter. (A non-
  *                        zero value was returned from the callback)
+ * @remarks
+ * There are two versions of this method, both with the same parameters and return
+ * results. However, the HashFileWithAsyncIO version uses asynchronous IO requests
+ * to read the file to hash. This may help on systems where the file I/O takes
+ * longer to complete than it does to compute the hash per disk read. Both
+ * versions use the low priority mechanism to play nice with potential users on
+ * the system.
+ */
+EXPORT int HashFileWithAsyncIO(
+    HashRequest* request, HashProgressCallback* callback);
+
+/**
+ * Accepts a HashRequest structure and attempts to calculate the requested hash
+ * of the provided file using synchronous IO. See the HashFileWithAsyncIO
+ * function for details of the parameters and return values.
  */
 EXPORT int HashFileWithSyncIO(
     HashRequest* request, HashProgressCallback* callback);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
