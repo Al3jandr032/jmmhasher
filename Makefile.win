@@ -1,12 +1,14 @@
 CC=cl
 LD=link
 RC=rc
-LDOPTS=/nologo /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /MANIFEST:embed /errorReport:none /TLBID:1
+#LDOPTS=/nologo /INCREMENTAL:NO /DYNAMICBASE /NXCOMPAT /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /MANIFEST:embed /errorReport:none /TLBID:1
+LDOPTS=/NXCOMPAT /INCREMENTAL:NO /DYNAMICBASE /OPT:REF /OPT:ICF /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /MANIFEST:embed /ERRORREPORT:NONE /NOLOGO /LTCG
 INCPATH=src
 OBJDIR=obj\win
 BINDIR=bin\win
 OPTFLAGS=
-CFLAGS=/nologo /W3 /WX /Oy- /I $(INCPATH) /D "WIN32" /D "_WINDOWS" /D "_UNICODE" /D "UNICODE" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\\$(OBJDIR)\\" /Gd /TC /errorReport:none
+#CFLAGS=/nologo /W3 /WX /Oy- /I $(INCPATH) /D "WIN32" /D "_WINDOWS" /D "_UNICODE" /D "UNICODE" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\\$(OBJDIR)\\" /Gd /TC /errorReport:none
+CFLAGS=/GS /GL /W3 /WX /Gy /Zc:wchar_t /I $(INCPATH) /Gm- /Ox /fp:precise /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_UNICODE" /D "UNICODE" /errorReport:none /Gd /Oi /MT /nologo /Ot /TC /Fo".\\$(OBJDIR)\\"
 RM=del /s /q
 RMDIR=rmdir /s /q
 MKDIR=mkdir
@@ -34,7 +36,7 @@ $(OBJDIR)\sha1.obj: $(OBJDIR) $(SRC)\core\sha1.c $(SRC)\core\sha1.h
 $(OBJDIR)\hasher.obj: $(OBJDIR) $(SRC)\win\hasher.c
 	$(CC) /c $(OPTFLAGS) $(CFLAGS) $(SRC)\win\hasher.c
 $(OBJDIR)\libhasher.obj: $(OBJDIR) $(SRC)\win\libhasher.c $(SRC)\win\libhasher.h
-	$(CC) /c /D HASHERDLL $(OPTFLAGS) $(CFLAGS) $(SRC)\win\libhasher.c
+	$(CC) /c /D "HASHERDLL" /D "_USRDLL" /D "_WINDLL" $(OPTFLAGS) $(CFLAGS) $(SRC)\win\libhasher.c
 $(OBJDIR)\libhasher.res: $(OBJDIR) $(SRC)\win\libhasher.rc
 	$(RC) /Fo"$(OBJDIR)\libhasher.res" /r /D UNICODE /D _UNICODE /NOLOGO $(SRC)\win\libhasher.rc
 
@@ -45,7 +47,7 @@ $(BINDIR)\jmmhasher.exe: $(OBJS) $(OBJDIR)\hasher.obj $(BINDIR)
 	$(LD) $(LDOPTS) /SUBSYSTEM:CONSOLE $(OBJS) $(OBJDIR)\hasher.obj /OUT:$(BINDIR)\jmmhasher.exe
 
 $(BINDIR)\hasher.dll: $(OBJS) $(OBJDIR)\libhasher.obj $(OBJDIR)\libhasher.res $(BINDIR)
-	$(LD) $(LDOPTS) /SUBSYSTEM:WINDOWS /DLL $(OBJS) $(OBJDIR)\libhasher.obj  $(OBJDIR)\libhasher.res /OUT:$(BINDIR)\hasher.dll
+	$(LD) $(LDOPTS) /SUBSYSTEM:WINDOWS /DLL /IMPLIB:".\\$(OBJDIR)\\hasher.lib" /TLBID:1 $(OBJS) $(OBJDIR)\libhasher.obj  $(OBJDIR)\libhasher.res /OUT:$(BINDIR)\hasher.dll
 
 clean: clean-obj clean-bin
 
